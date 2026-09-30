@@ -1,0 +1,15 @@
+{
+  "name": "Lean 4 Mathlib",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "leanprover.lean4"
+      ]
+    }
+  },
+  "postCreateCommand": "lake update && lake exe cache get",
+  "remoteUser": "vscode"
+}
