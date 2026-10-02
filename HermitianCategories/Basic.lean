@@ -105,11 +105,37 @@ The collection of λ-Hermitian forms on M.
 def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
   carrier := { f | IsLambdaHermitian R lam f }
   zero_mem' := by
-    -- Requires Functor.Additive to know D(0) = 0
-    simp [IsLambdaHermitian, formDual]
+    simp only [IsLambdaHermitian, Set.mem_ofPred_eq]
+    -- We want to prove 0 = λ • formDual 0.
+    -- Lean's `simp` automatically knows that additive functors map 0 to 0,
+    -- composition with 0 is 0, and scalar multiplying 0 is 0!
+    simp [formDual]
   add_mem' := by
     intro f g hf hg
-    -- Requires Functor.Additive to know D(f + g) = D(f) + D(g)
-    simp only [IsLambdaHermitian, formDual] at *
-    sorry -- Follows from linearity of composition and additivity of D
-  neg_mem' := sorry
+    simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
+    -- Build the equality chain step-by-step
+    calc f + g
+      -- 1. Replace f and g ONLY on the left side of this step
+      _ = ((lam : Rˣ) : R) • formDual f + ((lam : Rˣ) : R) • formDual g := by
+        conv_lhs => rw [hf, hg]
+      -- 2. Factor out the scalar lambda
+      _ = ((lam : Rˣ) : R) • (formDual f + formDual g) := by rw [← smul_add]
+      -- 3. Show that formDual distributes over addition
+      _ = ((lam : Rˣ) : R) • formDual (f + g) := by
+        -- `congr 1` strips away `lam •`, leaving `formDual f + formDual g = formDual (f + g)`
+        congr 1
+        -- Lean's simplifier automatically knows functors and composition are additive!
+        simp [formDual]
+  neg_mem' := by
+    intro f hf
+    simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
+    calc -f
+      -- 1. Replace f ONLY on the left side
+      _ = - (((lam : Rˣ) : R) • formDual f) := by
+        conv_lhs => rw [hf]
+      -- 2. Factor the negative sign inside the scalar multiplication
+      _ = ((lam : Rˣ) : R) • -(formDual f) := by rw [← smul_neg]
+      -- 3. Show that formDual preserves negatives
+      _ = ((lam : Rˣ) : R) • formDual (-f) := by
+        congr 1
+        simp [formDual]
