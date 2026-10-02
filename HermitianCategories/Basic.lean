@@ -80,26 +80,26 @@ variable (R : Type u) [CommRing R] [StarRing R]
 The subgroup Z⁰(R) of the units of R, containing all x ∈ Rˣ such that x = x*
 and the corresponding subgroup of coboundaries B⁰(R) consisting of all products x * (star x), for x in R.
 -/
-def isZeroCycle {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+def isZeroCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x = star x
 
-def Z0 : Subgroup Rˣ where
-  carrier := { x | isZeroCycle x }
-  one_mem' := by simp [isZeroCycle]
+def Z0Mul : Subgroup Rˣ where
+  carrier := { x | isZeroCycleMul x }
+  one_mem' := by simp [isZeroCycleMul]
   mul_mem' := by
     intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isZeroCycle] at *
+    simp only [Set.mem_ofPred_eq, isZeroCycleMul] at *
     rw [star_mul, ← ha, ← hb, mul_comm]
   inv_mem' := by
     intro x hx
-    simp only [Set.mem_ofPred_eq, isZeroCycle] at *
+    simp only [Set.mem_ofPred_eq, isZeroCycleMul] at *
     rw [star_inv, ← hx]
 
-def isZeroNorm {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+def isZeroNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * star y
 
-def B0 : Subgroup Rˣ where
-  carrier := { x | isZeroNorm x }
+def B0Mul : Subgroup Rˣ where
+  carrier := { x | isZeroNormMul x }
   one_mem' := by
     rw [Set.mem_ofPred_eq]
     use 1
@@ -119,7 +119,7 @@ def B0 : Subgroup Rˣ where
     use z⁻¹
     rw [hz, mul_inv, star_inv]
 
-lemma B0_le_Z0 : B0 R ≤ Z0 R := by
+lemma B0Mul_le_Z0Mul : B0Mul R ≤ Z0Mul R := by
   intro x hx
   rcases hx with ⟨y, rfl⟩
   change y * star y = star (y * star y)
@@ -129,28 +129,28 @@ lemma B0_le_Z0 : B0 R ≤ Z0 R := by
 Here we establish that B⁰(R) is a subgroup of Z⁰(R).
 -/
 
-def B0_in_Z0 (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z0 R) :=
-  (B0 R).subgroupOf (Z0 R)
+def B0Mul_in_Z0Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z0Mul R) :=
+  (B0Mul R).subgroupOf (Z0Mul R)
 
 /--
 The Tate cohomology group H⁰(C₂;Rˣ) of the multiplicative group.
 -/
 
-def TateCohomologyZero (R : Type u) [CommRing R] [StarRing R] : Type u :=
-  Z0 R ⧸ B0_in_Z0 R
+def TateCohomologyZeroMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
+  Z0Mul R ⧸ B0Mul_in_Z0Mul R
 
 /--
 The subgroup Z¹(R) of the units of R, containing all x ∈ Rˣ such that x * x* = 1.
 --/
-def isOneCycle {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+def isOneCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x * star x = 1
 
-def Z1 : Subgroup Rˣ where
-  carrier := { x | isOneCycle x }
-  one_mem' := by simp [isOneCycle]
+def Z1Mul : Subgroup Rˣ where
+  carrier := { x | isOneCycleMul x }
+  one_mem' := by simp [isOneCycleMul]
   mul_mem' := by
     intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneCycle] at *
+    simp only [Set.mem_ofPred_eq, isOneCycleMul] at *
     rw [star_mul]
     calc a * b * (star b * star a)
     _ = (a * star a) * (b * star b) := by ac_rfl
@@ -159,25 +159,25 @@ def Z1 : Subgroup Rˣ where
 
   inv_mem' := by
     intro x hx
-    simp only [Set.mem_ofPred_eq, isOneCycle] at *
+    simp only [Set.mem_ofPred_eq, isOneCycleMul] at *
     rw [star_inv, ← mul_inv, hx, inv_one]
 
 /--
 The subgroup of boundaries B¹(R) consisting of 1-norms, i.e. elements of the form x / x*.
 -/
 
-def isOneNorm {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+def isOneNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * (star y)⁻¹
 
-def B1 : Subgroup Rˣ where
-  carrier := { x | isOneNorm x}
+def B1Mul : Subgroup Rˣ where
+  carrier := { x | isOneNormMul x}
   one_mem' := by
-    simp only [Set.mem_ofPred_eq, isOneNorm]
+    simp only [Set.mem_ofPred_eq, isOneNormMul]
     use 1
     rw [star_one, inv_one, mul_one]
   mul_mem' := by
     intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneNorm] at *
+    simp only [Set.mem_ofPred_eq, isOneNormMul] at *
     rcases ha with ⟨ya, rfl⟩
     rcases hb with ⟨yb, rfl⟩
     use ya * yb
@@ -185,7 +185,7 @@ def B1 : Subgroup Rˣ where
     ac_rfl
   inv_mem' := by
     intro x hx
-    simp only [Set.mem_ofPred_eq, isOneNorm] at *
+    simp only [Set.mem_ofPred_eq, isOneNormMul] at *
     rcases hx with ⟨y, rfl⟩
     use y⁻¹
     rw [mul_inv, inv_inv, star_inv, inv_inv]
@@ -194,7 +194,7 @@ def B1 : Subgroup Rˣ where
 Here we establish that B¹(R) is a subgroup of Z¹(R).
 -/
 
-lemma B1_le_Z1 : B1 R ≤ Z1 R := by
+lemma B1_le_Z1 : B1Mul R ≤ Z1Mul R := by
   intro x hx
   rcases hx with ⟨y, rfl⟩
   change y * (star y)⁻¹ * star (y * (star y)⁻¹) = 1
@@ -203,7 +203,21 @@ lemma B1_le_Z1 : B1 R ≤ Z1 R := by
   _ = (y * y⁻¹) * (star y * (star y)⁻¹) := by ac_rfl
   _ = 1 := by simp
 
-/-! ### λ-Hermitian Forms -/
+/--
+B¹(R) is a subgroup of Z¹(R).
+-/
+
+def B1Mul_in_Z1Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z1Mul R) :=
+  (B1Mul R).subgroupOf (Z1Mul R)
+
+/--
+Define the Tate cohomology group H¹(C₂;Rˣ) of the unit group Rˣ.
+-/
+
+def TateCohomologyOneMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
+  Z1Mul R ⧸ B1Mul_in_Z1Mul R
+
+/-! ## λ-Hermitian Forms -/
 
 -- We now assume our Hermitian category C is enriched over R-modules.
 -- `Linear R C` provides the `Module R (X ⟶ Y)` typeclass instance automatically.
@@ -223,13 +237,13 @@ A sesquilinear form f is λ-Hermitian if f = λ • f^†.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
 --/
-def IsLambdaHermitian {M : C} (lam : Z1 R) (f : S M) : Prop :=
+def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
   f = ((lam : Rˣ) : R) • formDual f
 
 /--
 The collection of λ-Hermitian forms on M.
 --/
-def LambdaHermitianForms (M : C) (lam : Z1 R) : AddSubgroup (S M) where
+def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
   carrier := { f | IsLambdaHermitian R lam f }
   zero_mem' := by
     -- Requires Functor.Additive to know D(0) = 0
