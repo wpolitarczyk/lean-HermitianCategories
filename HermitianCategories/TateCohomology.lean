@@ -8,6 +8,12 @@ import Mathlib.Algebra.Star.Basic
 import Mathlib.Algebra.Group.Subgroup.Basic
 import Mathlib.GroupTheory.QuotientGroup.Basic
 
+import Mathlib.Tactic.Ring
+
+set_option linter.style.emptyLine false
+set_option linter.style.docString false
+set_option linter.style.longLine false
+
 /-! # Rings with Involution and their Tate cohomology groups -/
 
 -- Let R be a commutative ring equipped with an involution (star operation)
@@ -155,16 +161,25 @@ B¹(R) is an additive subgroup of Z¹(R).
 lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by
   intro x hx
   rcases hx with ⟨y, rfl⟩
-
-  -- Unfold the membership of Z¹(R)
   change (y - star y) + star (y - star y) = 0
 
-  -- Step-by-step collapse to zero
-  calc (y - star y) + star (y - star y)
-    _ = (y - star y) + (star y - star (star y)) := by rw [star_sub]
-    _ = (y - star y) + (star y - y) := by rw [star_star]
-    _ = (y - star y) + -(y - star y) := by rw [← neg_sub]
-    _ = 0 := by rw [add_neg_cancel]
+  -- Push the star inside, canceling the double star on the second 'y'
+  rw [star_sub, star_star]
+
+  -- The goal is now `y - star y + (star y - y) = 0`, which is pure algebra!
+  ring
+  -- intro x hx
+  -- rcases hx with ⟨y, rfl⟩
+
+  -- -- Unfold the membership of Z¹(R)
+  -- change (y - star y) + star (y - star y) = 0
+
+  -- -- Step-by-step collapse to zero
+  -- calc (y - star y) + star (y - star y)
+  --   _ = (y - star y) + (star y - star (star y)) := by rw [star_sub]
+  --   _ = (y - star y) + (star y - y) := by rw [star_star]
+  --   _ = (y - star y) + -(y - star y) := by rw [← neg_sub]
+  --   _ = 0 := by rw [add_neg_cancel]
 
 /--
 Mathematically restrict B¹(R) to be an AddSubgroup of Z¹(R).

@@ -13,9 +13,11 @@ import Mathlib.CategoryTheory.Preadditive.Basic
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.CategoryTheory.Preadditive.Opposite
 
--- Import your newly split Tate Cohomology definitions!
--- (Adjust this path if your folder structure demands it)
-import TateCohomology
+import HermitianCategories.TateCohomology
+
+set_option linter.style.emptyLine false
+set_option linter.style.docString false
+set_option linter.style.longLine false
 
 /-!
 # Hermitian Categories
