@@ -16,69 +16,103 @@ import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.CategoryTheory.Preadditive.Opposite
 import Mathlib.GroupTheory.QuotientGroup.Basic
 
-/-!
-# Hermitian Categories
 
-This file defines the core `HermitianCategory` typeclass, formalizing categories equipped
-with a contravariant duality functor. It also defines sesquilinear forms and establishes
-their abelian group structure in preadditive categories.
--/
-
-open CategoryTheory
-open Opposite
-
-universe v u
-
-class HermitianCategory (C : Type u) [Category.{v} C] where
-  /-- The contravariant duality functor (often denoted by * or D) -/
-  duality : Cᵒᵖ ⥤ C
-
-  /-- The natural isomorphism between the identity functor and the double dual -/
-  doubleDualIso : 𝟭 C ≅ duality.rightOp ⋙ duality
-
-  /-- The symmetric coherence condition: D(η_X) ∘ η_{D(X)} = id_{D(X)} -/
-  coherence : ∀ (X : C),
-    (doubleDualIso.hom.app (duality.obj (op X))) ≫
-    (duality.map (doubleDualIso.hom.app X).op) = 𝟙 (duality.obj (op X))
-
-
-/-! ## Sesquilinear forms -/
-variable {C : Type u} [Category.{v} C] [HermitianCategory C]
-
-/--
-A sesquilinear form on an object M is a morphism from M to D(M).
-We use the `duality` functor from our `HermitianCategory` class.
---/
-
-abbrev SesquilinearForm (M : C) : Type v :=
-  M ⟶ HermitianCategory.duality.obj (op M)
-
-/--
-S(M) is introduced as an abbreviation for the type of sesquilinear forms on M.
---/
-
-abbrev S (M : C) := SesquilinearForm M
-
--- To guarantee that S(M) is an abelian group, we require the category C
--- to be preadditive.
-variable [Preadditive C]
-
-/--
-Because C is a preadditive category, every Hom-set in C is automatically
-an abelian group. S(M) trivially inherits this structure.
---/
-
-instance (M : C) : AddCommGroup (S M) :=
-  inferInstance
-
-/-! ## Rings with Involution and their Tate cohomology groups -/
+/-! # Rings with Involution and their Tate cohomology groups -/
 
 -- Let R be a commutative ring equipped with an involution (star operation)
 variable (R : Type u) [CommRing R] [StarRing R]
 
-/-! ### Additive Tate cohomology groups-/
+/-! ## Additive Tate cohomology groups -/
 
-/-! ### Multiplicative Tate cohomology groups -/
+/--
+The additive subgroup Z⁰(R) of R, containing all x ∈ R such that x = x*
+-/
+def isZeroCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
+  x = star x
+
+def Z0Add : AddSubgroup R where
+  carrier := { x | isZeroCycleAdd x }
+  zero_mem' := by sorry
+  add_mem' := by sorry
+  neg_mem' := by sorry
+
+/--
+The additive subgroup of boundaries B⁰(R) consisting of traces, i.e., elements y + y*.
+-/
+def isZeroNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
+  ∃ y : R, x = y + star y
+
+def B0Add : AddSubgroup R where
+  carrier := { x | isZeroNormAdd x }
+  zero_mem' := by sorry
+  add_mem' := by sorry
+  neg_mem' := by sorry
+
+/--
+B⁰(R) is an additive subgroup of Z⁰(R).
+-/
+lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by sorry
+
+/--
+Mathematically restrict B⁰(R) to be an AddSubgroup of Z⁰(R).
+Note: For additive subgroups, the restriction method is `addSubgroupOf`.
+-/
+def B0Add_in_Z0Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z0Add R) :=
+  (B0Add R).addSubgroupOf (Z0Add R)
+
+/--
+The additive Tate cohomology group H⁰(C₂;R).
+-/
+abbrev TateCohomologyZeroAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
+  ↥(Z0Add R) ⧸ B0Add_in_Z0Add R
+
+instance : AddCommGroup (TateCohomologyZeroAdd R) := inferInstance
+
+
+/--
+The additive subgroup Z¹(R) of R, containing all x ∈ R such that x + x* = 0.
+-/
+def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
+  x + star x = 0
+
+def Z1Add : AddSubgroup R where
+  carrier := { x | isOneCycleAdd x }
+  zero_mem' := by sorry
+  add_mem' := by sorry
+  neg_mem' := by sorry
+
+/--
+The additive subgroup of boundaries B¹(R) consisting of elements of the form y - y*.
+-/
+def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
+  ∃ y : R, x = y - star y
+
+def B1Add : AddSubgroup R where
+  carrier := { x | isOneNormAdd x }
+  zero_mem' := by sorry
+  add_mem' := by sorry
+  neg_mem' := by sorry
+
+/--
+B¹(R) is an additive subgroup of Z¹(R).
+-/
+lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by sorry
+
+/--
+Mathematically restrict B¹(R) to be an AddSubgroup of Z¹(R).
+-/
+def B1Add_in_Z1Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z1Add R) :=
+  (B1Add R).addSubgroupOf (Z1Add R)
+
+/--
+The additive Tate cohomology group H¹(C₂;R).
+-/
+abbrev TateCohomologyOneAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
+  ↥(Z1Add R) ⧸ B1Add_in_Z1Add R
+
+instance : AddCommGroup (TateCohomologyOneAdd R) := inferInstance
+
+/-! ## Multiplicative Tate cohomology groups -/
 
 /--
 The subgroup Z⁰(R) of the units of R, containing all x ∈ Rˣ such that x = x*
@@ -224,6 +258,61 @@ abbrev TateCohomologyOneMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
   Z1Mul R ⧸ B1Mul_in_Z1Mul R
 
 instance : CommGroup (TateCohomologyOneMul R) := inferInstance
+
+/-!
+# Hermitian Categories
+
+This file defines the core `HermitianCategory` typeclass, formalizing categories equipped
+with a contravariant duality functor. It also defines sesquilinear forms and establishes
+their abelian group structure in preadditive categories.
+-/
+
+open CategoryTheory
+open Opposite
+
+universe v u
+
+class HermitianCategory (C : Type u) [Category.{v} C] where
+  /-- The contravariant duality functor (often denoted by * or D) -/
+  duality : Cᵒᵖ ⥤ C
+
+  /-- The natural isomorphism between the identity functor and the double dual -/
+  doubleDualIso : 𝟭 C ≅ duality.rightOp ⋙ duality
+
+  /-- The symmetric coherence condition: D(η_X) ∘ η_{D(X)} = id_{D(X)} -/
+  coherence : ∀ (X : C),
+    (doubleDualIso.hom.app (duality.obj (op X))) ≫
+    (duality.map (doubleDualIso.hom.app X).op) = 𝟙 (duality.obj (op X))
+
+
+/-! ## Sesquilinear forms -/
+variable {C : Type u} [Category.{v} C] [HermitianCategory C]
+
+/--
+A sesquilinear form on an object M is a morphism from M to D(M).
+We use the `duality` functor from our `HermitianCategory` class.
+--/
+
+abbrev SesquilinearForm (M : C) : Type v :=
+  M ⟶ HermitianCategory.duality.obj (op M)
+
+/--
+S(M) is introduced as an abbreviation for the type of sesquilinear forms on M.
+--/
+
+abbrev S (M : C) := SesquilinearForm M
+
+-- To guarantee that S(M) is an abelian group, we require the category C
+-- to be preadditive.
+variable [Preadditive C]
+
+/--
+Because C is a preadditive category, every Hom-set in C is automatically
+an abelian group. S(M) trivially inherits this structure.
+--/
+
+instance (M : C) : AddCommGroup (S M) :=
+  inferInstance
 
 /-! ## λ-Hermitian Forms -/
 
