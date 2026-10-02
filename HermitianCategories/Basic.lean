@@ -207,7 +207,9 @@ lemma B1_le_Z1 : B1 R ≤ Z1 R := by
 
 -- We now assume our Hermitian category C is enriched over R-modules.
 -- `Linear R C` provides the `Module R (X ⟶ Y)` typeclass instance automatically.
-variable {C : Type u} [Category.{v} C] [HermitianCategory C] [Linear R C]
+variable {C : Type u} [Category.{v} C] [HermitianCategory C]
+variable [Preadditive C] [Linear R C]
+variable [Functor.Additive (HermitianCategory.duality (C := C))]
 
 /--
 The dual form f^† : M ⟶ D(M).
@@ -218,22 +220,23 @@ def formDual {M : C} (f : S M) : S M :=
 
 /--
 A sesquilinear form f is λ-Hermitian if f = λ • f^†.
-We use double coercion `((λ : Rˣ) : R)` to extract the element from the subgroup
+We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
 --/
-def IsLambdaHermitian {M : C} (λ : Z1 R) (f : S M) : Prop :=
-  f = ((λ : Rˣ) : R) • formDual f
+def IsLambdaHermitian {M : C} (lam : Z1 R) (f : S M) : Prop :=
+  f = ((lam : Rˣ) : R) • formDual f
 
 /--
 The collection of λ-Hermitian forms on M.
-
-*Mathematical Note:* This is defined as an `AddSubgroup` (an abelian group) rather
-than an `R`-submodule. In a Hermitian category with a non-trivial involution, scalar
-multiplication generally does not preserve λ-Hermiticity: if f is λ-Hermitian,
-r • f is only λ-Hermitian if r = r*.
 --/
-def LambdaHermitianForms (M : C) (λ : Z1 R) : AddSubgroup (S M) where
-  carrier := { f | IsLambdaHermitian R λ f }
-  zero_mem' := sorry
-  add_mem' := sorry
+def LambdaHermitianForms (M : C) (lam : Z1 R) : AddSubgroup (S M) where
+  carrier := { f | IsLambdaHermitian R lam f }
+  zero_mem' := by
+    -- Requires Functor.Additive to know D(0) = 0
+    simp [IsLambdaHermitian, formDual]
+  add_mem' := by
+    intro f g hf hg
+    -- Requires Functor.Additive to know D(f + g) = D(f) + D(g)
+    simp only [IsLambdaHermitian, formDual] at *
+    sorry -- Follows from linearity of composition and additivity of D
   neg_mem' := sorry
