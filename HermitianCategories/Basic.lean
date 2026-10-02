@@ -76,6 +76,10 @@ instance (M : C) : AddCommGroup (S M) :=
 -- Let R be a commutative ring equipped with an involution (star operation)
 variable (R : Type u) [CommRing R] [StarRing R]
 
+/-! ### Additive Tate cohomology groups-/
+
+/-! ### Multiplicative Tate cohomology groups -/
+
 /--
 The subgroup Z⁰(R) of the units of R, containing all x ∈ Rˣ such that x = x*
 and the corresponding subgroup of coboundaries B⁰(R) consisting of all products x * (star x), for x in R.
@@ -136,8 +140,10 @@ def B0Mul_in_Z0Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z0Mul R) :
 The Tate cohomology group H⁰(C₂;Rˣ) of the multiplicative group.
 -/
 
-def TateCohomologyZeroMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
+abbrev TateCohomologyZeroMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
   Z0Mul R ⧸ B0Mul_in_Z0Mul R
+
+instance : CommGroup (TateCohomologyZeroMul R) := inferInstance
 
 /--
 The subgroup Z¹(R) of the units of R, containing all x ∈ Rˣ such that x * x* = 1.
@@ -194,7 +200,7 @@ def B1Mul : Subgroup Rˣ where
 Here we establish that B¹(R) is a subgroup of Z¹(R).
 -/
 
-lemma B1_le_Z1 : B1Mul R ≤ Z1Mul R := by
+lemma B1Mul_le_Z1Mul : B1Mul R ≤ Z1Mul R := by
   intro x hx
   rcases hx with ⟨y, rfl⟩
   change y * (star y)⁻¹ * star (y * (star y)⁻¹) = 1
@@ -214,8 +220,10 @@ def B1Mul_in_Z1Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z1Mul R) :
 Define the Tate cohomology group H¹(C₂;Rˣ) of the unit group Rˣ.
 -/
 
-def TateCohomologyOneMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
+abbrev TateCohomologyOneMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
   Z1Mul R ⧸ B1Mul_in_Z1Mul R
+
+instance : CommGroup (TateCohomologyOneMul R) := inferInstance
 
 /-! ## λ-Hermitian Forms -/
 
