@@ -32,9 +32,15 @@ def isZeroCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
 
 def Z0Add : AddSubgroup R where
   carrier := { x | isZeroCycleAdd x }
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  neg_mem' := by sorry
+  zero_mem' := by simp [isZeroCycleAdd]
+  add_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isZeroCycleAdd] at *
+    rw [star_add, ← ha, ← hb]
+  neg_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isZeroCycleAdd] at *
+    rw [star_neg, ← hx]
 
 /--
 The additive subgroup of boundaries B⁰(R) consisting of traces, i.e., elements y + y*.
@@ -44,14 +50,36 @@ def isZeroNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
 
 def B0Add : AddSubgroup R where
   carrier := { x | isZeroNormAdd x }
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  neg_mem' := by sorry
+  zero_mem' := by
+    simp only [isZeroNormAdd]
+    use 0
+    rw [star_zero, add_zero]
+  add_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isZeroNormAdd] at *
+    rcases ha with ⟨ya, rfl⟩
+    rcases hb with ⟨yb, rfl⟩
+    use (ya + yb)
+    rw [star_add]
+    ac_rfl
+  neg_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isZeroNormAdd] at *
+    rcases hx with ⟨y, rfl⟩
+    use -y
+    rw [star_neg, neg_add]
 
 /--
 B⁰(R) is an additive subgroup of Z⁰(R).
 -/
-lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by sorry
+lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by
+  intro x hx
+  rcases hx with ⟨y, rfl⟩
+
+  -- Unfold the subgroup membership into the `isZeroCycleAdd` equation
+  change y + star y = star (y + star y)
+
+  rw [star_add, star_star, add_comm]
 
 /--
 Mathematically restrict B⁰(R) to be an AddSubgroup of Z⁰(R).
@@ -68,7 +96,6 @@ abbrev TateCohomologyZeroAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
 
 instance : AddCommGroup (TateCohomologyZeroAdd R) := inferInstance
 
-
 /--
 The additive subgroup Z¹(R) of R, containing all x ∈ R such that x + x* = 0.
 -/
@@ -77,9 +104,21 @@ def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
 
 def Z1Add : AddSubgroup R where
   carrier := { x | isOneCycleAdd x }
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  neg_mem' := by sorry
+  zero_mem' := by
+    simp [isOneCycleAdd]
+  add_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isOneCycleAdd] at *
+    rw [star_add]
+    -- Group the terms to expose (a + star a) and (b + star b)
+    calc a + b + (star a + star b)
+      _ = (a + star a) + (b + star b) := by ac_rfl
+      _ = 0 + 0 := by rw [ha, hb]
+      _ = 0 := by rw [add_zero]
+  neg_mem' := by
+    intro a ha
+    simp only [Set.mem_ofPred_eq, isOneCycleAdd] at *
+    rw [star_neg, ← neg_add, ha, neg_zero]
 
 /--
 The additive subgroup of boundaries B¹(R) consisting of elements of the form y - y*.
@@ -89,14 +128,52 @@ def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
 
 def B1Add : AddSubgroup R where
   carrier := { x | isOneNormAdd x }
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  neg_mem' := by sorry
+  zero_mem' := by
+    simp only [Set.mem_ofPred_eq, isOneNormAdd]
+    -- 0 = 0 - 0*
+    use 0
+    rw [star_zero, sub_zero]
+  add_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isOneNormAdd] at *
+    rcases ha with ⟨ya, rfl⟩
+    rcases hb with ⟨yb, rfl⟩
+    use ya + yb
+
+    -- `sub_add_sub_comm` is the exact Mathlib lemma for (a - b) + (c - d) = (a + c) - (b + d)
+    calc ya - star ya + (yb - star yb)
+      _ = (ya + yb) - (star ya + star yb) := by rw [sub_add_sub_comm]
+      _ = (ya + yb) - star (ya + yb) := by rw [← star_add]
+  neg_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isOneNormAdd] at *
+    rcases hx with ⟨y, rfl⟩
+    use -y
+
+    -- We can carefully step through the negative distribution
+    calc -(y - star y)
+      _ = star y - y := by rw [neg_sub]
+      _ = star y + -y := by rw [sub_eq_add_neg]
+      _ = -y + star y := by rw [add_comm]
+      _ = -y - -star y := by rw [← sub_neg_eq_add]
+      _ = -y - star (-y) := by rw [← star_neg]
 
 /--
 B¹(R) is an additive subgroup of Z¹(R).
 -/
-lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by sorry
+lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by
+  intro x hx
+  rcases hx with ⟨y, rfl⟩
+
+  -- Unfold the membership of Z¹(R)
+  change (y - star y) + star (y - star y) = 0
+
+  -- Step-by-step collapse to zero
+  calc (y - star y) + star (y - star y)
+    _ = (y - star y) + (star y - star (star y)) := by rw [star_sub]
+    _ = (y - star y) + (star y - y) := by rw [star_star]
+    _ = (y - star y) + -(y - star y) := by rw [← neg_sub]
+    _ = 0 := by rw [add_neg_cancel]
 
 /--
 Mathematically restrict B¹(R) to be an AddSubgroup of Z¹(R).
@@ -111,6 +188,104 @@ abbrev TateCohomologyOneAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
   ↥(Z1Add R) ⧸ B1Add_in_Z1Add R
 
 instance : AddCommGroup (TateCohomologyOneAdd R) := inferInstance
+
+def isGeneralizedHalfUnit (R : Type u) [CommRing R] [StarRing R] (x : R) : Prop :=
+  x + star x = 1
+
+lemma TateCohomologyZeroAddVanishes
+  (h : ∃ r : R, isGeneralizedHalfUnit R r) : Subsingleton (TateCohomologyZeroAdd R) := by
+  -- Extract the generalized half unit
+  rcases h with ⟨r, hr⟩
+
+  -- Prove that every element is the zero element, i.e. every cycle is a norm.
+  have h_zero : ∀ x : TateCohomologyZeroAdd R, x = 0 := by
+    intro x
+
+    -- Because x is in a quotient, we can lift it to a representative element 'a' in Z⁰(R)
+    induction x using Quotient.inductionOn
+    rename_i a
+
+    -- To show that the class of 'a' is 0, we must show that 'a' is a coboundary.
+    -- The Mathlib lemma for ⟦a⟧ = 0 is QuotientAddGroup.eq_zero_iff
+    rw [QuotientAddGroup.eq_zero_iff]
+
+    -- This brings us to the core mathematical goal, i.e. to show that a is a norm.
+    -- Tell Lean to treat `a` as a raw ring element and unfold the B0Add definition.
+    change ∃ y : R, (a : R) = y + star y
+
+    -- Now provide the witness!
+    use (a : R) * r
+
+    -- Extract the proof that `a = a*` from the package `a`
+    have ha : (a : R) = star (a : R) := a.property
+
+    calc (a : R)
+    _ = (a : R) * (1 : R) := by rw [mul_one]
+    _ = (a : R) * (r + star r) := by rw [hr]
+    _ = ((a : R) * r) + ((a : R) * star r) := by rw [mul_add]
+    _ = ((a : R) * r) + (star (a : R) * star r) := by rw [← ha]
+    _ = ((a : R) * r) + star (r * (a : R)) := by rw [← star_mul]
+    _ = ((a : R) * r) + star ((a : R) * r) := by rw [mul_comm]
+
+  -- Now that we know every element is 0, Subsingleton is trivial
+  constructor
+  intro a b
+  rw [h_zero a, h_zero b]
+
+lemma TateCohomologyOneAddVanishes
+  (h : ∃ r : R, isGeneralizedHalfUnit R r) : Subsingleton (TateCohomologyOneAdd R) := by
+  -- Extract the generalized half unit
+  rcases h with ⟨r, hr⟩
+
+  -- Prove that every element is the zero element, i.e. every cycle is a norm.
+  have h_zero : ∀ x : TateCohomologyOneAdd R, x = 0 := by
+    intro x
+
+    -- Because x is in a quotient, we can lift it to a representative element 'a' in Z⁰(R)
+    induction x using Quotient.inductionOn
+    rename_i a
+
+    -- To show that the class of 'a' is 0, we must show that 'a' is a coboundary.
+    -- The Mathlib lemma for ⟦a⟧ = 0 is QuotientAddGroup.eq_zero_iff
+    rw [QuotientAddGroup.eq_zero_iff]
+
+    -- This brings us to the core mathematical goal, i.e. to show that a is a norm.
+    -- Tell Lean to treat `a` as a raw ring element and unfold the B0Add definition.
+    change ∃ y : R, (a : R) = y - star y
+
+    -- Now provide the witness!
+    use (a : R) * r
+
+    -- Extract the proof that `star a = -a` using a robust calc block
+    have ha : star (a : R) = - (a : R) := by
+      calc star (a : R)
+        _ = star (a : R) + 0 := by rw [add_zero]
+        _ = star (a : R) + ((a : R) + - (a : R)) := by rw [← add_neg_cancel (a : R)]
+        _ = (star (a : R) + (a : R)) + - (a : R) := by rw [← add_assoc]
+        _ = ((a : R) + star (a : R)) + - (a : R) := by rw [add_comm (star (a : R))]
+        _ = 0 + - (a : R) := by rw [a.property]
+        _ = - (a : R) := by rw [zero_add]
+
+    -- Our goal right now is: (a : R) = (a : R) * r - star ((a : R) * r)
+    -- It is much easier to start with the messy witness and simplify it down to `a`.
+    -- `symm` flips the goal so the messy side is on the left!
+    symm
+
+    -- Now we just simplify the witness down to `a` step-by-step
+    calc (a : R) * r - star ((a : R) * r)
+      _ = (a : R) * r - star r * star (a : R) := by rw [star_mul]
+      _ = (a : R) * r - star (a : R) * star r := by rw [mul_comm (star r)]
+      _ = (a : R) * r - (-(a : R)) * star r := by rw [ha]
+      _ = (a : R) * r - -( (a : R) * star r ) := by rw [neg_mul]
+      _ = (a : R) * r + (a : R) * star r := by rw [sub_neg_eq_add]
+      _ = (a : R) * (r + star r) := by rw [← mul_add]
+      _ = (a : R) * 1 := by rw [hr]
+      _ = (a : R) := by rw [mul_one]
+
+  -- Now that we know every element is 0, Subsingleton is trivial
+  constructor
+  intro a b
+  rw [h_zero a, h_zero b]
 
 /-! ## Multiplicative Tate cohomology groups -/
 
