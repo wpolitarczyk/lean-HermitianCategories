@@ -12,6 +12,9 @@ import Mathlib.CategoryTheory.Linear.Basic
 import Mathlib.CategoryTheory.NatIso
 import Mathlib.CategoryTheory.Opposites
 import Mathlib.CategoryTheory.Preadditive.Basic
+import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
+import Mathlib.CategoryTheory.Preadditive.Opposite
+import Mathlib.GroupTheory.QuotientGroup.Basic
 
 /-!
 # Hermitian Categories
@@ -68,22 +71,137 @@ an abelian group. S(M) trivially inherits this structure.
 instance (M : C) : AddCommGroup (S M) :=
   inferInstance
 
-/-! ## Rings with Involution and Z¹(R) -/
+/-! ## Rings with Involution and their Tate cohomology groups -/
 
 -- Let R be a commutative ring equipped with an involution (star operation)
 variable (R : Type u) [CommRing R] [StarRing R]
 
 /--
+The subgroup Z⁰(R) of the units of R, containing all x ∈ Rˣ such that x = x*
+and the corresponding subgroup of coboundaries B⁰(R) consisting of all products x * (star x), for x in R.
+-/
+def isZeroCycle {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+  x = star x
+
+def Z0 : Subgroup Rˣ where
+  carrier := { x | isZeroCycle x }
+  one_mem' := by simp [isZeroCycle]
+  mul_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isZeroCycle] at *
+    rw [star_mul, ← ha, ← hb, mul_comm]
+  inv_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isZeroCycle] at *
+    rw [star_inv, ← hx]
+
+def isZeroNorm {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+  ∃ y : Rˣ, x = y * star y
+
+def B0 : Subgroup Rˣ where
+  carrier := { x | isZeroNorm x }
+  one_mem' := by
+    rw [Set.mem_ofPred_eq]
+    use 1
+    rw [star_one, mul_one]
+  mul_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq] at *
+    rcases ha with ⟨ya, hya⟩
+    rcases hb with ⟨yb, hyb⟩
+    use ya * yb
+    rw [hya, hyb, star_mul]
+    ac_rfl
+  inv_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq] at *
+    rcases hx with ⟨z, hz⟩
+    use z⁻¹
+    rw [hz, mul_inv, star_inv]
+
+lemma B0_le_Z0 : B0 R ≤ Z0 R := by
+  intro x hx
+  rcases hx with ⟨y, rfl⟩
+  change y * star y = star (y * star y)
+  rw [star_mul, star_star]
+
+/--
+Here we establish that B⁰(R) is a subgroup of Z⁰(R).
+-/
+
+def B0_in_Z0 (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z0 R) :=
+  (B0 R).subgroupOf (Z0 R)
+
+/--
+The Tate cohomology group H⁰(C₂;Rˣ) of the multiplicative group.
+-/
+
+def TateCohomologyZero (R : Type u) [CommRing R] [StarRing R] : Type u :=
+  Z0 R ⧸ B0_in_Z0 R
+
+/--
 The subgroup Z¹(R) of the units of R, containing all x ∈ Rˣ such that x * x* = 1.
 --/
+def isOneCycle {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+  x * star x = 1
+
 def Z1 : Subgroup Rˣ where
-  carrier := { x | (x : R) * star (x : R) = 1 }
-  one_mem' := by simp
+  carrier := { x | isOneCycle x }
+  one_mem' := by simp [isOneCycle]
   mul_mem' := by
-    -- For x, y ∈ Z¹(R), we have (xy)(xy)* = x y y* x* = x 1 x* = x x* = 1.
-    -- Proof sketched via sorry for the setup stage.
-    sorry
-  inv_mem' := sorry
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isOneCycle] at *
+    rw [star_mul]
+    calc a * b * (star b * star a)
+    _ = (a * star a) * (b * star b) := by ac_rfl
+    _ = 1 * 1 := by rw [ha, hb]
+    _ = 1 := by rw [mul_one]
+
+  inv_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isOneCycle] at *
+    rw [star_inv, ← mul_inv, hx, inv_one]
+
+/--
+The subgroup of boundaries B¹(R) consisting of 1-norms, i.e. elements of the form x / x*.
+-/
+
+def isOneNorm {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
+  ∃ y : Rˣ, x = y * (star y)⁻¹
+
+def B1 : Subgroup Rˣ where
+  carrier := { x | isOneNorm x}
+  one_mem' := by
+    simp only [Set.mem_ofPred_eq, isOneNorm]
+    use 1
+    rw [star_one, inv_one, mul_one]
+  mul_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_ofPred_eq, isOneNorm] at *
+    rcases ha with ⟨ya, rfl⟩
+    rcases hb with ⟨yb, rfl⟩
+    use ya * yb
+    rw [star_mul, mul_inv]
+    ac_rfl
+  inv_mem' := by
+    intro x hx
+    simp only [Set.mem_ofPred_eq, isOneNorm] at *
+    rcases hx with ⟨y, rfl⟩
+    use y⁻¹
+    rw [mul_inv, inv_inv, star_inv, inv_inv]
+
+/--
+Here we establish that B¹(R) is a subgroup of Z¹(R).
+-/
+
+lemma B1_le_Z1 : B1 R ≤ Z1 R := by
+  intro x hx
+  rcases hx with ⟨y, rfl⟩
+  change y * (star y)⁻¹ * star (y * (star y)⁻¹) = 1
+  rw [star_mul, star_inv, star_star]
+  calc y * (star y)⁻¹ * (y⁻¹ * star y)
+  _ = (y * y⁻¹) * (star y * (star y)⁻¹) := by ac_rfl
+  _ = 1 := by simp
 
 /-! ### λ-Hermitian Forms -/
 
