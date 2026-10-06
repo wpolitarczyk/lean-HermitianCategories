@@ -91,6 +91,51 @@ In diagrammatic order (f ≫ g), this applies η_M followed by D(f).
 def formDual {M : C} (f : S M) : S M :=
   (HermitianCategory.doubleDualIso.hom.app M) ≫ (HermitianCategory.duality.map f.op)
 
+variable [StarLinearDuality R C]
+
+/-- The dual form map is conjugate-linear: (r • f)† = r* • f†. -/
+@[simp]
+lemma formDual_smul (r : R) {M : C} (f : S M) :
+    formDual (r • f) = star r • formDual f := by
+  dsimp [formDual]
+  rw [StarLinearDuality.map_smul]
+  -- Re-associate scalar multiplication out of the categorical composition:
+  -- η_M ≫ (star r • D(f.op)) = star r • (η_M ≫ D(f.op))
+  apply CategoryTheory.Linear.comp_smul -- (HermitianCategory.doubleDualIso.hom.app M) (star r) _
+
+/-- Taking the dual form twice recovers the original form, by naturality and coherence. -/
+@[simp]
+lemma formDoubleDual {M : C} (f : S M) :
+  formDual (formDual f) = f := by
+  -- Expand both occurrences of the dual form: f† = η_M ≫ D.map f.op.
+  simp only [formDual]
+  -- Name the duality functor and the components of η : Id_C ⟶ D².
+  -- Specifying C makes the choice of HermitianCategory instance unambiguous.
+  let D := HermitianCategory.duality (C := C)
+  let η := HermitianCategory.doubleDualIso (C := C).hom
+  let η_M := HermitianCategory.doubleDualIso.hom.app M
+  let η_D_M := HermitianCategory.doubleDualIso.hom.app (D.obj (op M))
+  -- Restate the goal using these abbreviations; this is a definitional equality.
+  change η_M ≫ D.map (η_M ≫ D.map (f.op)).op = f
+  -- Opposites reverse composition, and D preserves the resulting composition.
+  -- Reassociate to isolate η_M ≫ D²(f), the part to which naturality applies.
+  rw [op_comp, Functor.map_comp, ← Category.assoc]
+  -- Naturality for f : M ⟶ D(M), oriented to move f before the component of η.
+  have nat : η_M ≫ D.map (D.map f.op).op = f ≫ η_D_M := by
+    -- Fold the explicit double-dual map into (D.rightOp ⋙ D).map f,
+    -- matching the form in which the naturality theorem is stated.
+    rw [← Functor.rightOp_map, ← Functor.comp_map]
+    rw [← HermitianCategory.doubleDualIso.hom.naturality f]
+    -- The identity functor acts as the identity on morphisms.
+    rw [Functor.id_map]
+  rw [nat]
+  -- Regroup to expose η_{D(M)} ≫ D(η_M), where D(η_M) means D.map η_M.op.
+  rw [Category.assoc]
+  -- Coherence identifies this pair with the identity morphism of D(M).
+  rw [HermitianCategory.coherence]
+  -- Postcomposing f with the identity recovers f.
+  rw [Category.comp_id]
+
 /--
 A sesquilinear form f is λ-Hermitian if f = λ • f^†.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
