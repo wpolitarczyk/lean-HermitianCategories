@@ -62,6 +62,11 @@ S(M) is introduced as an abbreviation for the type of sesquilinear forms on M.
 
 abbrev S (M : C) := SesquilinearForm M
 
+/-- A form is nonsingular when its associated morphism M ⟶ D(M) is an isomorphism.
+This is a property of the form, distinct from invertibility of an isometry between forms. -/
+abbrev isNonSingular {M : C} (f : S M) : Prop :=
+  IsIso f
+
 -- To guarantee that S(M) is an abelian group, we require the category C
 -- to be preadditive.
 variable [Preadditive C]
@@ -85,6 +90,15 @@ variable [Linear R C]
 variable [Functor.Additive (HermitianCategory.duality (C := C))]
 
 /--
+A mixin typeclass asserting that the duality functor of a Hermitian category
+is conjugate-linear (star-linear) with respect to the `StarRing R` action.
+-/
+class StarLinearDuality (R : Type*) [CommRing R] [StarRing R] (C : Type u)
+    [Category.{v} C] [Preadditive C] [Linear R C] [HermitianCategory C] : Prop where
+  map_smul : ∀ (r : R) {X Y : C} (f : X ⟶ Y),
+    HermitianCategory.duality.map (r • f).op = star r • HermitianCategory.duality.map f.op
+
+/--
 The dual form f^† : M ⟶ D(M).
 In diagrammatic order (f ≫ g), this applies η_M followed by D(f).
 --/
@@ -101,7 +115,7 @@ lemma formDual_smul (r : R) {M : C} (f : S M) :
   rw [StarLinearDuality.map_smul]
   -- Re-associate scalar multiplication out of the categorical composition:
   -- η_M ≫ (star r • D(f.op)) = star r • (η_M ≫ D(f.op))
-  apply CategoryTheory.Linear.comp_smul -- (HermitianCategory.doubleDualIso.hom.app M) (star r) _
+  apply CategoryTheory.Linear.comp_smul
 
 /-- Taking the dual form twice recovers the original form, by naturality and coherence. -/
 @[simp]
@@ -144,24 +158,32 @@ and cast the unit into the underlying ring so it can act via scalar multiplicati
 def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
   f = ((lam : Rˣ) : R) • formDual f
 
+/-- Combine the symmetry condition with invertibility of the form morphism. -/
+abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
+  IsLambdaHermitian R lam f ∧ isNonSingular f
 /--
 The collection of λ-Hermitian forms on M.
 --/
 def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
   carrier := { f | IsLambdaHermitian R lam f }
+
   zero_mem' := by
-    simp only [IsLambdaHermitian, Set.mem_ofPred_eq]
-    -- We want to prove 0 = λ • formDual 0.
-    -- Lean's `simp` automatically knows that additive functors map 0 to 0,
-    -- composition with 0 is 0, and scalar multiplying 0 is 0!
-    simp [formDual]
+    simp only [IsLambdaHermitian, Set.mem_ofPred_eq, formDual]
+    -- Isolate the functor's zero mapping:
+    have H_zero : HermitianCategory.duality.map (0 : S M).op = 0 := by
+      exact Functor.map_zero HermitianCategory.duality _ _
+
+    rw [H_zero]
+    rw [CategoryTheory.Limits.comp_zero]
+    rw [smul_zero]
+
   add_mem' := by
     intro f g hf hg
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
-    -- Build the equality chain step-by-step
     calc f + g
-      -- 1. Replace f and g ONLY on the left side of this step
       _ = ((lam : Rˣ) : R) • formDual f + ((lam : Rˣ) : R) • formDual g := by
+        -- Restrict rewriting to the left side, so f and g inside the target
+        -- adjoints are not themselves replaced by their Hermitian expressions.
         conv_lhs => rw [hf, hg]
       -- 2. Factor out the scalar lambda
       _ = ((lam : Rˣ) : R) • (formDual f + formDual g) := by rw [← smul_add]
@@ -169,8 +191,16 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
       _ = ((lam : Rˣ) : R) • formDual (f + g) := by
         -- `congr 1` strips away `lam •`, leaving `formDual f + formDual g = formDual (f + g)`
         congr 1
-        -- Lean's simplifier automatically knows functors and composition are additive!
-        simp [formDual]
+        simp only [formDual]
+        rw [← CategoryTheory.Preadditive.comp_add]
+
+        -- Explicitly provide the functor and the morphisms to map_add.
+        -- Lean natively knows that f.op + g.op is the exact same thing as (f + g).op
+        have H_add : HermitianCategory.duality.map f.op + HermitianCategory.duality.map g.op = HermitianCategory.duality.map (f + g).op := by
+          exact (Functor.map_add HermitianCategory.duality).symm
+
+        rw [H_add]
+
   neg_mem' := by
     intro f hf
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
@@ -183,4 +213,127 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
       -- 3. Show that formDual preserves negatives
       _ = ((lam : Rˣ) : R) • formDual (-f) := by
         congr 1
-        simp [formDual]
+        simp only [formDual]
+        rw [← CategoryTheory.Preadditive.comp_neg]
+
+        -- Explicitly provide the functor and the morphism to map_neg
+        have H_neg : -(HermitianCategory.duality.map f.op) = HermitianCategory.duality.map (-f).op := by
+          exact (Functor.map_neg HermitianCategory.duality).symm
+
+        rw [H_neg]
+
+/--
+A λ-Hermitian form on M is an element of the subgroup of λ-Hermitian forms.
+The `↥` coerces the subgroup into a Type. For an element h, `h.val` is the
+underlying morphism and `h.property` is its λ-Hermitian condition.
+-/
+abbrev LambdaHermitianForm (M : C) (lam : Z1Mul R) : Type v :=
+  ↥(LambdaHermitianForms R M lam)
+
+/-- If `r` is invariant under the involution (self-adjoint), scalar multiplication
+preserves λ-Hermitian forms. -/
+lemma IsLambdaHermitian.smul {M : C} {lam : Z1Mul R} {f : S M}
+    (hf : IsLambdaHermitian R lam f) {r : R} (hr : IsSelfAdjoint r) :
+    IsLambdaHermitian R lam (r • f) := by
+  dsimp [IsLambdaHermitian] at *
+  calc r • f
+    -- Apply scalar multiplication to the equality hf without rewriting f
+    -- inside the expression on its right-hand side.
+    _ = r • (((lam : Rˣ) : R) • formDual f) := congrArg (fun g : S M => r • g) hf
+    _ = ((lam : Rˣ) : R) • (r • formDual f) := by rw [smul_comm]
+    _ = ((lam : Rˣ) : R) • (star r • formDual f) := by rw [hr]
+    _ = ((lam : Rˣ) : R) • formDual (r • f) := by rw [formDual_smul]
+
+/--
+An isometry is an invertible morphism that pulls back the target form to the source form.
+The conjunction separates invertibility of f from the form-preservation equation.
+-/
+def isIsometryLambdaHermitianForms {M N : C} (lam : Z1Mul R)
+  (hM : LambdaHermitianForm R M lam)
+  (hN : LambdaHermitianForm R N lam)
+  (f : M ⟶ N) : Prop :=
+  IsIso f ∧
+  f ≫ hN.val ≫ (HermitianCategory.duality.map f.op) = hM.val
+
+/--
+The type of all isometries between two specific λ-Hermitian forms.
+For an element f of this subtype, `f.val` is the underlying morphism in C.
+The proofs `f.property.1` and `f.property.2` assert invertibility and form preservation.
+-/
+def Isometries {M N : C} (lam : Z1Mul R)
+  (hM : LambdaHermitianForm R M lam)
+  (hN : LambdaHermitianForm R N lam) : Type v :=
+  { f : M ⟶ N // isIsometryLambdaHermitianForms R lam hM hN f }
+
+/--
+A nonsingular λ-Hermitian object consists of a base object M, a λ-Hermitian form,
+and a proof that its associated morphism is invertible.
+-/
+structure HermitianObject (lam : Z1Mul R) where
+  M : C
+  form : LambdaHermitianForm R M lam
+  nonsingular : isNonSingular form.val
+
+/--
+Define the Category instance.
+We tell Lean that the morphisms are our `Isometries`, and we provide the proofs
+that the identity morphism is an isometry, and that composing two isometries
+results in another isometry.
+
+The remaining category laws use Mathlib's default proof tactics: equality of these
+subtype morphisms reduces to equality of their underlying morphisms in C.
+-/
+instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
+  -- The hom-set between X and Y is the subtype of isometries
+  Hom X Y := Isometries R lam X.form Y.form
+
+  -- Pair the underlying identity with the two proofs required of an isometry.
+  id X := ⟨𝟙 X.M, by
+    unfold isIsometryLambdaHermitianForms
+    let D := HermitianCategory.duality (C := C)
+    change IsIso (𝟙 X.M) ∧ 𝟙 X.M ≫ X.form ≫ D.map (𝟙 X.M).op = X.form
+    -- The identity is its own inverse. This explicit construction separates
+    -- the existential witness from the IsIso structure that contains it.
+    have h1 : IsIso ( 𝟙 X.M ) := by
+      have : ∃ g, 𝟙 X.M ≫ g = 𝟙 X.M ∧ g ≫ 𝟙 X.M = 𝟙 X.M := by
+        use 𝟙 X.M
+        -- `constructor` splits the conjunction; `<;>` applies the rewrite to both goals.
+        constructor <;> rw [Category.id_comp]
+      -- The anonymous `have` is named `this`; IsIso.mk packages it as the field `out`.
+      exact IsIso.mk this
+    -- Opposites and functors preserve identity arrows, so pulling back along
+    -- the identity leaves the form unchanged.
+    have h2 : 𝟙 X.M ≫ X.form ≫ D.map (𝟙 X.M).op = X.form := by
+      rw [Category.id_comp, op_id, D.map_id, Category.comp_id]
+    exact ⟨ h1, h2 ⟩
+    ⟩
+
+  -- Compose the underlying morphisms, then prove invertibility and form preservation.
+  comp {X Y Z} f g := ⟨f.val ≫ g.val, by
+    unfold isIsometryLambdaHermitianForms
+    let D := HermitianCategory.duality (C := C)
+    change IsIso (f.val ≫ g.val) ∧ (f.val ≫ g.val) ≫ Z.form ≫ D.map (f.val ≫ g.val).op = X.form
+    -- Subtype proofs are not automatically registered as typeclass instances.
+    -- These local instances make `inv` and its cancellation lemmas available.
+    let _ : IsIso f.val := f.property.1
+    let _ : IsIso g.val := g.property.1
+    have h1 : ∃ h, (f.val ≫ g.val) ≫ h = 𝟙 X.M ∧ h ≫ (f.val ≫ g.val) = 𝟙 Z.M := by
+      -- The inverse runs in the opposite order: Z.M ⟶ Y.M ⟶ X.M.
+      use (inv g.val) ≫ (inv f.val)
+      -- Associativity and inverse-cancellation simp lemmas prove both equations.
+      constructor <;> simp
+    have h2 : (f.val ≫ g.val) ≫ Z.form ≫ D.map (f.val ≫ g.val).op = X.form := by
+      have f_preserves_form : f.val ≫ Y.form ≫ D.map (f.val).op = X.form := f.property.2
+      have g_preserves_form : g.val ≫ Z.form ≫ D.map (g.val).op = Y.form := g.property.2
+      -- Dualizing a composite reverses its factors. This exposes a pullback
+      -- along g followed by a pullback along f.
+      rw [op_comp, D.map_comp]
+      calc
+        (f.val ≫ g.val) ≫ Z.form ≫ D.map (g.val).op ≫ D.map (f.val).op
+        -- Only the parentheses change here; the order of morphisms is preserved.
+        _ = f.val ≫ (g.val ≫ Z.form ≫ D.map (g.val).op) ≫ D.map (f.val).op := by simp only [Category.assoc]
+        _ = f.val ≫ Y.form ≫ D.map f.val.op := by rw [g_preserves_form]
+        _ = X.form := by rw [f_preserves_form]
+    -- h1 is an existential proof, so package it as IsIso before pairing it with h2.
+    exact ⟨IsIso.mk h1, h2⟩
+  ⟩
