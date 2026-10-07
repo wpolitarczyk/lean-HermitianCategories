@@ -1,4 +1,5 @@
 import HermitianCategories.Basic
+import HermitianCategories.HermitianForms
 import HermitianCategories.TateCohomology
 
 /-!
