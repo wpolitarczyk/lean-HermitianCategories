@@ -13,6 +13,7 @@ import Mathlib.CategoryTheory.Opposites
 import Mathlib.CategoryTheory.Preadditive.Basic
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.CategoryTheory.Preadditive.Opposite
+import Mathlib.CategoryTheory.Linear.LinearFunctor
 
 import HermitianCategories.Basic
 import HermitianCategories.TateCohomology
@@ -40,12 +41,6 @@ universe v u
 -- In particular, Preadditive C must be available before we can assume Linear R C.
 variable {C : Type u} [Category.{v} C] [HermitianCategory C] [Preadditive C]
 
-/-! ## λ-Hermitian Forms -/
-
-set_option linter.style.emptyLine false
-set_option linter.style.docString false
-set_option linter.style.longLine false
-
 -- We re-introduce our base ring R to use for our Linear enrichment and Lambda definitions.
 variable (R : Type u) [CommRing R] [StarRing R]
 
@@ -55,6 +50,12 @@ variable [Linear R C]
 -- Additivity of D is a separate assumption: an arbitrary functor between
 -- preadditive categories need not preserve sums of morphisms.
 variable [Functor.Additive (HermitianCategory.duality (C := C))]
+
+/-! ## λ-Hermitian Forms -/
+
+set_option linter.style.emptyLine false
+set_option linter.style.docString false
+set_option linter.style.longLine false
 
 /--
 A mixin typeclass asserting that the duality functor of a Hermitian category
@@ -307,3 +308,50 @@ instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
 As an abbreviation, this reuses the category instance on `HermitianObject` directly. -/
 abbrev HermitianFormCat (lam : Z1Mul R) : Type _ :=
   HermitianObject (C := C) R lam
+
+/-! ## Hermitian functors -/
+
+variable {D : Type u} [Category D] [Preadditive D] [Linear R D] [HermitianCategory D]
+variable (functor : C ⥤ D)
+
+def HermitianFunctor (hf : DualityPreservingFunctor functor)
+    (eta : Z1Mul R) : Prop :=
+  ∀ M : C,
+    hf.nat_iso.hom.app
+        (op ((HermitianCategory.duality (C := C)).obj (op M))) =
+      ((eta : Rˣ) : R) •
+        ((HermitianCategory.duality (C := D)).map
+            (hf.nat_iso.hom.app (op M)).op ≫
+          (HermitianCategory.doubleDualIso (C := D)).inv.app (functor.obj M) ≫
+          functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app M))
+
+/- Maybe prove some basic properties like the fact that a composition of Hermitian functors is a Hermitian functor. -/
+
+variable [Functor.Additive (HermitianCategory.duality (C := D))]
+variable [Functor.Additive functor] [Functor.Linear R functor]
+
+def mapHermitianForms {M : C}
+    (hf : DualityPreservingFunctor functor)
+    (lam eta : Z1Mul R)
+    (hermf : HermitianFunctor R functor hf eta)
+    (h : LambdaHermitianForm R M lam) :
+    LambdaHermitianForm R (functor.obj M) (eta * lam) := by
+  refine ⟨mapSesqForms functor hf h.val, ?_⟩
+  change IsLambdaHermitian R (eta * lam)
+    (mapSesqForms functor hf h.val)
+  sorry
+
+def mapHermitianFormsHom {M : C}
+  (hf : DualityPreservingFunctor functor)
+  (lam eta : Z1Mul R)
+  (hermf : HermitianFunctor R functor hf eta) :
+  LambdaHermitianForm R M lam →+ LambdaHermitianForm R (functor.obj M) (eta * lam) where
+  toFun := sorry
+
+  map_zero' := sorry
+
+  map_add' := sorry
+
+/- Hermitian functors induce functors of the respective categories of Hermitian objects. -/
+
+/- The scaling functor as a special case of a Hermitian functor. -/
