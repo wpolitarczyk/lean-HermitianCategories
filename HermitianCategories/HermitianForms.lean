@@ -17,7 +17,18 @@ import Mathlib.CategoryTheory.Preadditive.Opposite
 import HermitianCategories.Basic
 import HermitianCategories.TateCohomology
 
-/-! # The category of hermitian forms -/
+/-!
+# The category of λ-Hermitian forms
+
+Starting from the sesquilinear forms in `Basic`, this file defines the adjoint
+operation, λ-Hermitian forms, and nonsingular objects with isometries as morphisms.
+The parameter λ is a norm-one unit, represented by `Z1Mul R` from `TateCohomology`.
+
+Preadditivity supplies addition of forms; `Linear R C` supplies scalar multiplication.
+Additivity of the duality makes adjoints additive, while `StarLinearDuality` makes
+them conjugate-linear. The involutivity proof uses naturality and coherence of
+the double-dual isomorphism.
+-/
 
 open CategoryTheory
 open Opposite
@@ -25,6 +36,8 @@ open Opposite
 -- Objects live in universe u and morphisms in universe v; these need not coincide.
 universe v u
 
+-- Imports bring in declarations, but do not carry over another file's `variable` context.
+-- In particular, Preadditive C must be available before we can assume Linear R C.
 variable {C : Type u} [Category.{v} C] [HermitianCategory C] [Preadditive C]
 
 /-! ## λ-Hermitian Forms -/
@@ -49,6 +62,7 @@ is conjugate-linear (star-linear) with respect to the `StarRing R` action.
 -/
 class StarLinearDuality (R : Type*) [CommRing R] [StarRing R] (C : Type u)
     [Category.{v} C] [Preadditive C] [Linear R C] [HermitianCategory C] : Prop where
+  /-- Dualizing a scalar multiple conjugates its scalar by the ring involution. -/
   map_smul : ∀ (r : R) {X Y : C} (f : X ⟶ Y),
     HermitianCategory.duality.map (r • f).op = star r • HermitianCategory.duality.map f.op
 
@@ -289,5 +303,7 @@ instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
     exact ⟨IsIso.mk h1, h2⟩
   ⟩
 
+/-- A name for the category of nonsingular λ-Hermitian objects and their isometries.
+As an abbreviation, this reuses the category instance on `HermitianObject` directly. -/
 abbrev HermitianFormCat (lam : Z1Mul R) : Type _ :=
   HermitianObject (C := C) R lam

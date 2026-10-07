@@ -26,7 +26,7 @@ then forms the quotient Z/B. These are direct presentations; no comparison with
 Mathlib's general Tate-cohomology functor is constructed here.
 
 The two additive vanishing results use a generalized half-unit r with r + star r = 1.
-The norm-one unit subgroup `Z1Mul` also supplies the parameters λ used in `Basic`.
+The norm-one unit subgroup `Z1Mul` also supplies the parameters λ used in `HermitianForms`.
 -/
 
 set_option linter.style.emptyLine false
@@ -123,6 +123,7 @@ The degree-one cycle condition: x + star x = 0, equivalently star x = -x.
 def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x + star x = 0
 
+/-- The kernel of the additive trace map: elements with x + star x = 0. -/
 def Z1Add : AddSubgroup R where
   carrier := { x | isOneCycleAdd x }
   zero_mem' := by
@@ -147,6 +148,7 @@ The degree-one boundary condition: x is a difference y - star y.
 def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y - star y
 
+/-- The image of the difference map y ↦ y - star y, as an additive subgroup. -/
 def B1Add : AddSubgroup R where
   carrier := { x | isOneNormAdd x }
   zero_mem' := by
@@ -337,6 +339,7 @@ The degree-zero multiplicative cycle condition: a unit is fixed by star.
 def isZeroCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x = star x
 
+/-- The subgroup of units fixed by the involution. -/
 def Z0Mul : Subgroup Rˣ where
   carrier := { x | isZeroCycleMul x }
   one_mem' := by simp [isZeroCycleMul]
@@ -353,6 +356,7 @@ def Z0Mul : Subgroup Rˣ where
 def isZeroNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * star y
 
+/-- The image of the norm map on units y ↦ y * star y. -/
 def B0Mul : Subgroup Rˣ where
   carrier := { x | isZeroNormMul x }
   one_mem' := by
@@ -399,12 +403,12 @@ abbrev TateCohomologyZeroMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
 instance : CommGroup (TateCohomologyZeroMul R) := inferInstance
 
 /--
-The subgroup Z¹(R) of the units of R, containing all x ∈ Rˣ such that x * x* = 1.
+The degree-one multiplicative cycle condition: a unit has norm one.
 --/
 def isOneCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x * star x = 1
 
-/-- Norm-one units. `Basic` uses elements of this subgroup as λ-Hermitian parameters. -/
+/-- Norm-one units. `HermitianForms` uses elements of this subgroup as λ-Hermitian parameters. -/
 def Z1Mul : Subgroup Rˣ where
   carrier := { x | isOneCycleMul x }
   one_mem' := by simp [isOneCycleMul]
@@ -429,6 +433,7 @@ The degree-one multiplicative boundary condition: a unit has the form y * (star 
 def isOneNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * (star y)⁻¹
 
+/-- Multiplicative degree-one boundaries, with witnesses in the unit group. -/
 def B1Mul : Subgroup Rˣ where
   carrier := { x | isOneNormMul x}
   one_mem' := by
