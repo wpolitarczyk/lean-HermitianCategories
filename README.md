@@ -1,31 +1,74 @@
 # Hermitian Categories in Lean 4
 
-This repository contains a Lean 4 formalization of **Hermitian Categories** (categories with duality), along with key algebraic instances and the construction of sesquilinear forms.
+This repository develops a Lean 4 formalization of **Hermitian categories** (categories with duality), sesquilinear and λ-Hermitian forms, and functors compatible with duality. It also includes explicit Tate cohomology constructions for commutative rings with involution.
 
 ## Overview
 
-A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $D : \mathcal{C}^{\text{op}} \to \mathcal{C}$, a natural isomorphism $\eta : \text{Id}_{\mathcal{C}} \cong D^2$, and a symmetric coherence condition $D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)}$. 
+A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $D : \mathcal{C}^{\text{op}} \to \mathcal{C}$, a natural isomorphism $\eta : \text{Id}_{\mathcal{C}} \cong D^2$, and a coherence condition $D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)}$.
 
-This project formalizes the base algebraic typeclass and provides the following concrete instances:
-* **Finite Abelian Groups (`FinAb`)**: Hermitian structure induced by Pontryagin duality (using an injective cogenerator like $\mathbb{R}/\mathbb{Z}$ or $\mathbb{Q}/\mathbb{Z}$).
-* **Finitely Generated Projective Modules (`ProjFinGen R`)**: Hermitian structure over a commutative ring $R$, induced by the standard Hom-duality $P \mapsto \operatorname{Hom}_R(P,R)$.
-* **Sesquilinear Forms**: Definition of the abelian group of sesquilinear forms $S(M) := \operatorname{Hom}_{\mathcal{C}}(M, D(M))$ on objects within preadditive Hermitian categories.
+The current formalization includes:
+
+- **Sesquilinear forms:** `Sesq M` is the morphism space $M \to D(M)$, with an abelian group structure when the category is preadditive.
+- **Adjoints and λ-Hermitian forms:** the adjoint operation `formDual` is involutive. For a norm-one unit $\lambda$, the condition is $h = \lambda \cdot h^\dagger$. Under the specified additivity and linearity assumptions, these forms constitute an additive subgroup; `StarLinearDuality` expresses conjugate-linearity of the duality.
+- **Nonsingular objects and isometries:** `HermitianObject` packages a λ-Hermitian form whose underlying morphism is an isomorphism. `HermitianFormCat` names the resulting category, with invertible form-preserving morphisms as its isometries.
+- **Duality preserving functors:** a functor together with a natural comparison isomorphism and double-dual coherence. `mapSesqForms` transports sesquilinear forms, and `mapSesqFormsHom` packages this map as an additive homomorphism when the functor is additive.
+- **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $r + r^* = 1$ implies vanishing of both additive groups.
+
+## Project Layout
+
+| Module | Contents |
+| --- | --- |
+| [Basic.lean](HermitianCategories/Basic.lean) | Categories with duality, sesquilinear forms, duality preserving functors, and additive transport of forms. |
+| [TateCohomology.lean](HermitianCategories/TateCohomology.lean) | Cycles, boundaries, quotient groups, generalized half-units, and the norm-one unit subgroup `Z1Mul`. |
+| [HermitianForms.lean](HermitianCategories/HermitianForms.lean) | Adjoints, λ-Hermitian forms, nonsingular objects, isometries, and work on Hermitian functors. Imports both modules above. |
+| [HermitianCategories.lean](HermitianCategories.lean) | Library entry point importing all three modules. |
+
+To use the full library:
+
+```lean
+import HermitianCategories
+```
+
+## Work in Progress and TODOs
+
+The concrete Hermitian structures below are planned and are **not yet implemented**:
+
+- [ ] **Finitely generated projective modules:** construct the Hermitian structure from $P \mapsto \operatorname{Hom}_R(P,R)$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
+- [ ] **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $A \mapsto \operatorname{Hom}(A,\mathbb{Q}/\mathbb{Z})$, and prove the double-dual isomorphism and coherence.
+
+Further work on functors:
+
+- [ ] Complete the symmetry proof in `mapHermitianForms`.
+- [ ] Complete `mapHermitianFormsHom`, the induced additive homomorphism on λ-Hermitian forms.
+- [ ] Establish composition properties of Hermitian functors and construct the induced functors between categories of Hermitian objects.
+- [ ] Develop the scaling functor as an example.
+
+`HermitianFunctor` currently defines an additional scalar-dependent condition on a `DualityPreservingFunctor`, which already carries its own coherence condition. The two transport constructions above still contain `sorry` placeholders; a successful build does not certify those unfinished proofs.
 
 ## Development Environment
 
-This project is configured for VS Code's **Dev Containers**, ensuring a perfectly reproducible Lean 4 environment isolated from your local machine.
+The project pins **Lean 4.34.1** in `lean-toolchain` and **Mathlib v4.34.1** in `lakefile.toml`. It can be developed locally or using the supplied VS Code Dev Container.
 
-### Running with Docker (Recommended)
+### Running with Docker
+
+With Docker running:
+
 1. Clone this repository to your local machine.
 2. Open the cloned folder in VS Code.
 3. Install the **Dev Containers** extension (`ms-vscode-remote.remote-containers`).
 4. When prompted (or by pressing `Cmd+Shift+P` / `Ctrl+Shift+P` and typing **Dev Containers: Reopen in Container**), reopen the project in the container.
 
-*Note: The container is configured to automatically run `lake exe cache get` upon creation to download the pre-compiled Mathlib binaries, which saves hours of compilation time.*
+The container installs the Lean extension and runs `lake update` followed by `lake exe cache get` upon creation. Once setup finishes, run `lake build` in its terminal.
 
 ### Running Locally (Without Docker)
-If you prefer to run Lean natively, ensure you have [elan](https://github.com/leanprover/elan) installed, then run the following in your terminal:
+
+Install [elan](https://github.com/leanprover/elan), then run the following from the repository root to download cached Mathlib build artifacts and build the library:
+
 ```bash
-lake update
 lake exe cache get
 lake build
+```
+
+The checked-in `lake-manifest.json` records dependency revisions. Use `lake update` when intentionally refreshing dependency resolution.
+
+The default build target imports all project modules through `HermitianCategories.lean`. GitHub Actions is configured to build the project and generate documentation on pushes and pull requests.
