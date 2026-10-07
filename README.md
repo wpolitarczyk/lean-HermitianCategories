@@ -1,6 +1,10 @@
 # Hermitian Categories in Lean 4
 
+[![Lean Action CI](https://github.com/wpolitarczyk/lean-HermitianCategories/actions/workflows/lean_action_ci.yml/badge.svg)](https://github.com/wpolitarczyk/lean-HermitianCategories/actions/workflows/lean_action_ci.yml)
+
 This repository develops a Lean 4 formalization of **Hermitian categories** (categories with duality), sesquilinear and λ-Hermitian forms, and functors compatible with duality. It also includes explicit Tate cohomology constructions for commutative rings with involution.
+
+**Documentation:** [Browse the project documentation](https://wpolitarczyk.github.io/lean-HermitianCategories/).
 
 ## Overview
 
