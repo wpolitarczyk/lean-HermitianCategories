@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Politarczyk
 -/
 
+import Mathlib.Algebra.Star.SelfAdjoint
 import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Functor.Basic
 import Mathlib.CategoryTheory.Linear.Basic
@@ -15,28 +16,40 @@ import Mathlib.CategoryTheory.Preadditive.Opposite
 
 import HermitianCategories.TateCohomology
 
+/-!
+# Hermitian Categories
+
+The constructions proceed from a category with duality to sesquilinear forms,
+λ-Hermitian forms, and the category of nonsingular λ-Hermitian objects with isometries.
+The parameters λ come from `Z1Mul R` in `TateCohomology`.
+
+Composition is written in diagrammatic order: `f ≫ g` means first f, then g.
+For `D : Cᵒᵖ ⥤ C`, the dual of an object M is `D.obj (op M)`, whereas the dual
+of a morphism f is `D.map f.op`. Taking opposites reverses the arrows; D itself
+is an ordinary covariant functor whose domain is the opposite category.
+
+The assumptions are introduced in layers: duality defines forms and their adjoints;
+preadditivity supplies addition; additivity of D makes adjoints additive; and
+`StarLinearDuality` controls how adjoints interact with scalar multiplication.
+-/
+
 set_option linter.style.emptyLine false
 set_option linter.style.docString false
 set_option linter.style.longLine false
 
-/-!
-# Hermitian Categories
-
-This file defines the core `HermitianCategory` typeclass, formalizing categories equipped
-with a contravariant duality functor. It also defines sesquilinear forms and establishes
-their abelian group structure in preadditive categories.
--/
-
 open CategoryTheory
 open Opposite
 
+-- Objects live in universe u and morphisms in universe v; these need not coincide.
 universe v u
 
+/-- A category with a duality functor, a double-dual identification, and coherence. -/
 class HermitianCategory (C : Type u) [Category.{v} C] where
-  /-- The contravariant duality functor (often denoted by * or D) -/
+  /-- The contravariant duality functor (often denoted by * or D). -/
   duality : Cᵒᵖ ⥤ C
 
-  /-- The natural isomorphism between the identity functor and the double dual -/
+  /-- The double-dual identification. `rightOp` turns D into a functor C ⥤ Cᵒᵖ,
+  so `duality.rightOp ⋙ duality` has both source and target C. -/
   doubleDualIso : 𝟭 C ≅ duality.rightOp ⋙ duality
 
   /-- The symmetric coherence condition: D(η_X) ∘ η_{D(X)} = id_{D(X)} -/
@@ -59,7 +72,6 @@ abbrev SesquilinearForm (M : C) : Type v :=
 /--
 S(M) is introduced as an abbreviation for the type of sesquilinear forms on M.
 --/
-
 abbrev S (M : C) := SesquilinearForm M
 
 /-- A form is nonsingular when its associated morphism M ⟶ D(M) is an isomorphism.
@@ -87,6 +99,8 @@ variable (R : Type u) [CommRing R] [StarRing R]
 -- We now assume our Hermitian category C is enriched over R-modules.
 -- `Linear R C` provides the `Module R (X ⟶ Y)` typeclass instance automatically.
 variable [Linear R C]
+-- Additivity of D is a separate assumption: an arbitrary functor between
+-- preadditive categories need not preserve sums of morphisms.
 variable [Functor.Additive (HermitianCategory.duality (C := C))]
 
 /--
@@ -152,6 +166,8 @@ lemma formDoubleDual {M : C} (f : S M) :
 
 /--
 A sesquilinear form f is λ-Hermitian if f = λ • f^†.
+The type `Z1Mul R` ensures λ is a unit satisfying λ * star λ = 1.
+Here λ is an actual cocycle, not a class in the multiplicative Tate quotient.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
 --/
@@ -162,7 +178,8 @@ def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
 abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
   IsLambdaHermitian R lam f ∧ isNonSingular f
 /--
-The collection of λ-Hermitian forms on M.
+The additive subgroup of all λ-Hermitian forms on M, including singular forms.
+Nonsingularity is imposed later on objects: it is not generally preserved by addition.
 --/
 def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
   carrier := { f | IsLambdaHermitian R lam f }
@@ -185,11 +202,8 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
         -- Restrict rewriting to the left side, so f and g inside the target
         -- adjoints are not themselves replaced by their Hermitian expressions.
         conv_lhs => rw [hf, hg]
-      -- 2. Factor out the scalar lambda
       _ = ((lam : Rˣ) : R) • (formDual f + formDual g) := by rw [← smul_add]
-      -- 3. Show that formDual distributes over addition
       _ = ((lam : Rˣ) : R) • formDual (f + g) := by
-        -- `congr 1` strips away `lam •`, leaving `formDual f + formDual g = formDual (f + g)`
         congr 1
         simp only [formDual]
         rw [← CategoryTheory.Preadditive.comp_add]
@@ -205,12 +219,9 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
     intro f hf
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
     calc -f
-      -- 1. Replace f ONLY on the left side
       _ = - (((lam : Rˣ) : R) • formDual f) := by
         conv_lhs => rw [hf]
-      -- 2. Factor the negative sign inside the scalar multiplication
       _ = ((lam : Rˣ) : R) • -(formDual f) := by rw [← smul_neg]
-      -- 3. Show that formDual preserves negatives
       _ = ((lam : Rˣ) : R) • formDual (-f) := by
         congr 1
         simp only [formDual]

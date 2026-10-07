@@ -10,11 +10,28 @@ import Mathlib.GroupTheory.QuotientGroup.Basic
 
 import Mathlib.Tactic.Ring
 
+/-!
+# Rings with involution and their Tate cohomology groups
+
+This file defines explicit cycle/boundary presentations in degrees zero and one
+for the order-two action given by `star`. For the additive group of R:
+
+* Z⁰ consists of fixed elements; B⁰ consists of traces y + star y.
+* Z¹ consists of elements with x + star x = 0; B¹ consists of differences y - star y.
+
+The multiplicative constructions use the abelian unit group Rˣ instead of R:
+sums become products, differences become y * (star y)⁻¹, and zero becomes one.
+Each construction first packages cycles and boundaries as subgroups, proves B ≤ Z,
+then forms the quotient Z/B. These are direct presentations; no comparison with
+Mathlib's general Tate-cohomology functor is constructed here.
+
+The two additive vanishing results use a generalized half-unit r with r + star r = 1.
+The norm-one unit subgroup `Z1Mul` also supplies the parameters λ used in `Basic`.
+-/
+
 set_option linter.style.emptyLine false
 set_option linter.style.docString false
 set_option linter.style.longLine false
-
-/-! # Rings with Involution and their Tate cohomology groups -/
 
 -- Let R be a commutative ring equipped with an involution (star operation)
 variable (R : Type u) [CommRing R] [StarRing R]
@@ -22,11 +39,12 @@ variable (R : Type u) [CommRing R] [StarRing R]
 /-! ## Additive Tate cohomology groups -/
 
 /--
-The additive subgroup Z⁰(R) of R, containing all x ∈ R such that x = x*
+The degree-zero cycle condition: x is fixed by the involution.
 -/
 def isZeroCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x = star x
 
+/-- Fixed elements form an additive subgroup; the fields below prove closure. -/
 def Z0Add : AddSubgroup R where
   carrier := { x | isZeroCycleAdd x }
   zero_mem' := by simp [isZeroCycleAdd]
@@ -40,11 +58,12 @@ def Z0Add : AddSubgroup R where
     rw [star_neg, ← hx]
 
 /--
-The additive subgroup of boundaries B⁰(R) consisting of traces, i.e., elements y + y*.
+The degree-zero boundary condition: x is the trace y + star y of some ring element y.
 -/
 def isZeroNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y + star y
 
+/-- The trace subgroup. Closure is proved by adding or negating the trace witnesses. -/
 def B0Add : AddSubgroup R where
   carrier := { x | isZeroNormAdd x }
   zero_mem' := by
@@ -54,10 +73,12 @@ def B0Add : AddSubgroup R where
   add_mem' := by
     intro a b ha hb
     simp only [Set.mem_ofPred_eq, isZeroNormAdd] at *
+    -- Extract the trace witnesses and substitute their expressions for a and b.
     rcases ha with ⟨ya, rfl⟩
     rcases hb with ⟨yb, rfl⟩
     use (ya + yb)
     rw [star_add]
+    -- `ac_rfl` rearranges terms using associativity and commutativity.
     ac_rfl
   neg_mem' := by
     intro x hx
@@ -80,21 +101,24 @@ lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by
 
 /--
 Mathematically restrict B⁰(R) to be an AddSubgroup of Z⁰(R).
-Note: For additive subgroups, the restriction method is `addSubgroupOf`.
+`addSubgroupOf` takes the preimage under the inclusion Z⁰(R) → R. The preceding
+inclusion theorem ensures this represents all of B⁰(R), not just an intersection.
 -/
 def B0Add_in_Z0Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z0Add R) :=
   (B0Add R).addSubgroupOf (Z0Add R)
 
 /--
-The additive Tate cohomology group H⁰(C₂;R).
+The additive Tate cohomology group in degree zero: fixed elements modulo traces.
+The numerator `↥(Z0Add R)` is a subtype: a ring element paired with its cycle proof.
 -/
 abbrev TateCohomologyZeroAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
   ↥(Z0Add R) ⧸ B0Add_in_Z0Add R
 
+-- The quotient inherits its additive group structure from Mathlib's quotient construction.
 instance : AddCommGroup (TateCohomologyZeroAdd R) := inferInstance
 
 /--
-The additive subgroup Z¹(R) of R, containing all x ∈ R such that x + x* = 0.
+The degree-one cycle condition: x + star x = 0, equivalently star x = -x.
 -/
 def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x + star x = 0
@@ -118,7 +142,7 @@ def Z1Add : AddSubgroup R where
     rw [star_neg, ← neg_add, ha, neg_zero]
 
 /--
-The additive subgroup of boundaries B¹(R) consisting of elements of the form y - y*.
+The degree-one boundary condition: x is a difference y - star y.
 -/
 def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y - star y
@@ -168,6 +192,7 @@ lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by
 
   -- The goal is now `y - star y + (star y - y) = 0`, which is pure algebra!
   ring
+  -- Alternative manual cancellation proof, kept for comparison with `ring`:
   -- intro x hx
   -- rcases hx with ⟨y, rfl⟩
 
@@ -188,16 +213,19 @@ def B1Add_in_Z1Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z1Add R
   (B1Add R).addSubgroupOf (Z1Add R)
 
 /--
-The additive Tate cohomology group H¹(C₂;R).
+The additive Tate cohomology group in degree one: cycles modulo differences y - star y.
 -/
 abbrev TateCohomologyOneAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
   ↥(Z1Add R) ⧸ B1Add_in_Z1Add R
 
 instance : AddCommGroup (TateCohomologyOneAdd R) := inferInstance
 
+/-- A generalized half-unit has trace one; no division operation is required. -/
 def isGeneralizedHalfUnit (R : Type u) [CommRing R] [StarRing R] (x : R) : Prop :=
   x + star x = 1
 
+/-- A generalized half-unit makes every degree-zero cycle a trace.
+`Subsingleton` expresses triviality here because this quotient group contains zero. -/
 lemma TateCohomologyZeroAddVanishes
   (h : ∃ r : R, isGeneralizedHalfUnit R r) : Subsingleton (TateCohomologyZeroAdd R) := by
   -- Extract the generalized half unit
@@ -207,7 +235,8 @@ lemma TateCohomologyZeroAddVanishes
   have h_zero : ∀ x : TateCohomologyZeroAdd R, x = 0 := by
     intro x
 
-    -- Because x is in a quotient, we can lift it to a representative element 'a' in Z⁰(R)
+    -- Quotient induction reduces the proposition to a representative a in Z⁰(R).
+    -- This does not choose a preferred representative or define a map out of the quotient.
     induction x using Quotient.inductionOn
     rename_i a
 
@@ -219,7 +248,7 @@ lemma TateCohomologyZeroAddVanishes
     -- Tell Lean to treat `a` as a raw ring element and unfold the B0Add definition.
     change ∃ y : R, (a : R) = y + star y
 
-    -- Now provide the witness!
+    -- For a fixed element a, the trace of a*r is a*(r + star r) = a.
     use (a : R) * r
 
     -- Extract the proof that `a = a*` from the package `a`
@@ -238,16 +267,18 @@ lemma TateCohomologyZeroAddVanishes
   intro a b
   rw [h_zero a, h_zero b]
 
+/-- A generalized half-unit also makes every degree-one cycle a boundary.
+The same witness a*r works, now using star a = -a and the difference map. -/
 lemma TateCohomologyOneAddVanishes
   (h : ∃ r : R, isGeneralizedHalfUnit R r) : Subsingleton (TateCohomologyOneAdd R) := by
   -- Extract the generalized half unit
   rcases h with ⟨r, hr⟩
 
-  -- Prove that every element is the zero element, i.e. every cycle is a norm.
+  -- Prove that every quotient class is zero by exhibiting a boundary witness for each cycle.
   have h_zero : ∀ x : TateCohomologyOneAdd R, x = 0 := by
     intro x
 
-    -- Because x is in a quotient, we can lift it to a representative element 'a' in Z⁰(R)
+    -- Quotient induction reduces the goal to a representative a in Z¹(R).
     induction x using Quotient.inductionOn
     rename_i a
 
@@ -255,11 +286,10 @@ lemma TateCohomologyOneAddVanishes
     -- The Mathlib lemma for ⟦a⟧ = 0 is QuotientAddGroup.eq_zero_iff
     rw [QuotientAddGroup.eq_zero_iff]
 
-    -- This brings us to the core mathematical goal, i.e. to show that a is a norm.
-    -- Tell Lean to treat `a` as a raw ring element and unfold the B0Add definition.
+    -- Unfold the B1Add membership condition, viewing the cycle a as a ring element.
     change ∃ y : R, (a : R) = y - star y
 
-    -- Now provide the witness!
+    -- For star a = -a, the difference a*r - star (a*r) equals a*(r + star r) = a.
     use (a : R) * r
 
     -- Extract the proof that `star a = -a` using a robust calc block
@@ -293,11 +323,16 @@ lemma TateCohomologyOneAddVanishes
   intro a b
   rw [h_zero a, h_zero b]
 
-/-! ## Multiplicative Tate cohomology groups -/
+/-!
+## Multiplicative Tate cohomology groups
+
+All witnesses below belong to Rˣ, so their inverses are available even when R is not a field.
+Commutativity of R makes Rˣ abelian; in particular the boundary subgroups are normal,
+as required by the quotient group construction.
+-/
 
 /--
-The subgroup Z⁰(R) of the units of R, containing all x ∈ Rˣ such that x = x*
-and the corresponding subgroup of coboundaries B⁰(R) consisting of all products x * (star x), for x in R.
+The degree-zero multiplicative cycle condition: a unit is fixed by star.
 -/
 def isZeroCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x = star x
@@ -314,6 +349,7 @@ def Z0Mul : Subgroup Rˣ where
     simp only [Set.mem_ofPred_eq, isZeroCycleMul] at *
     rw [star_inv, ← hx]
 
+/-- A multiplicative norm is a product y * star y with y a unit, not an arbitrary ring element. -/
 def isZeroNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * star y
 
@@ -338,6 +374,7 @@ def B0Mul : Subgroup Rˣ where
     use z⁻¹
     rw [hz, mul_inv, star_inv]
 
+/-- Multiplicative norms are fixed by star, so they represent degree-zero boundaries. -/
 lemma B0Mul_le_Z0Mul : B0Mul R ≤ Z0Mul R := by
   intro x hx
   rcases hx with ⟨y, rfl⟩
@@ -345,14 +382,15 @@ lemma B0Mul_le_Z0Mul : B0Mul R ≤ Z0Mul R := by
   rw [star_mul, star_star]
 
 /--
-Here we establish that B⁰(R) is a subgroup of Z⁰(R).
+View the boundary subgroup as a subgroup of the cycle group, using `subgroupOf`.
+The actual containment in the ambient unit group was proved in `B0Mul_le_Z0Mul`.
 -/
 
 def B0Mul_in_Z0Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z0Mul R) :=
   (B0Mul R).subgroupOf (Z0Mul R)
 
 /--
-The Tate cohomology group H⁰(C₂;Rˣ) of the multiplicative group.
+The multiplicative Tate group in degree zero: fixed units modulo multiplicative norms.
 -/
 
 abbrev TateCohomologyZeroMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
@@ -366,6 +404,7 @@ The subgroup Z¹(R) of the units of R, containing all x ∈ Rˣ such that x * x*
 def isOneCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x * star x = 1
 
+/-- Norm-one units. `Basic` uses elements of this subgroup as λ-Hermitian parameters. -/
 def Z1Mul : Subgroup Rˣ where
   carrier := { x | isOneCycleMul x }
   one_mem' := by simp [isOneCycleMul]
@@ -384,7 +423,7 @@ def Z1Mul : Subgroup Rˣ where
     rw [star_inv, ← mul_inv, hx, inv_one]
 
 /--
-The subgroup of boundaries B¹(R) consisting of 1-norms, i.e. elements of the form x / x*.
+The degree-one multiplicative boundary condition: a unit has the form y * (star y)⁻¹.
 -/
 
 def isOneNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
@@ -420,19 +459,21 @@ lemma B1Mul_le_Z1Mul : B1Mul R ≤ Z1Mul R := by
   rcases hx with ⟨y, rfl⟩
   change y * (star y)⁻¹ * star (y * (star y)⁻¹) = 1
   rw [star_mul, star_inv, star_star]
+  -- Commutativity lets us regroup into two unit/inverse pairs, each of which cancels.
   calc y * (star y)⁻¹ * (y⁻¹ * star y)
   _ = (y * y⁻¹) * (star y * (star y)⁻¹) := by ac_rfl
   _ = 1 := by simp
 
 /--
-B¹(R) is a subgroup of Z¹(R).
+Restrict B¹(R) to the cycle group, whose elements carry proofs of the norm-one condition.
 -/
 
 def B1Mul_in_Z1Mul (R : Type u) [CommRing R] [StarRing R] : Subgroup (Z1Mul R) :=
   (B1Mul R).subgroupOf (Z1Mul R)
 
 /--
-Define the Tate cohomology group H¹(C₂;Rˣ) of the unit group Rˣ.
+The multiplicative Tate group in degree one: norm-one units modulo y * (star y)⁻¹.
+An element of this quotient is a class of cocycles, unlike an element of `Z1Mul R` itself.
 -/
 
 abbrev TateCohomologyOneMul (R : Type u) [CommRing R] [StarRing R] : Type u :=
