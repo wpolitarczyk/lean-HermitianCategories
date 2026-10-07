@@ -115,3 +115,17 @@ between functors on Cᵒᵖ. This construction itself does not use coherence. -/
 def mapSesqForms {M : C} (F : C ⥤ D)
  (hf : DualityPreservingFunctor F) (h : Sesq M) : Sesq (F.obj M) :=
   (F.map h) ≫ (hf.nat_iso.inv.app (op M))
+
+variable [Preadditive C] [Preadditive D] (functor : C ⥤ D) [Functor.Additive functor]
+
+def mapSesqFormsHom (M : C) (hf : DualityPreservingFunctor functor) : Sesq M →+ Sesq (functor.obj M) where
+  toFun := mapSesqForms functor hf
+
+  map_zero' := by
+    unfold mapSesqForms
+    rw [Functor.map_zero, CategoryTheory.Limits.zero_comp]
+
+  map_add' := by
+    unfold mapSesqForms
+    intro x y
+    rw [Functor.Additive.map_add, Preadditive.add_comp]
