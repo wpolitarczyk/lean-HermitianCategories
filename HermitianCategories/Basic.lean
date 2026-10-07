@@ -72,11 +72,11 @@ abbrev SesquilinearForm (M : C) : Type v :=
 /--
 S(M) is introduced as an abbreviation for the type of sesquilinear forms on M.
 --/
-abbrev S (M : C) := SesquilinearForm M
+abbrev Sesq (M : C) := SesquilinearForm M
 
 /-- A form is nonsingular when its associated morphism M ⟶ D(M) is an isomorphism.
 This is a property of the form, distinct from invertibility of an isometry between forms. -/
-abbrev isNonSingular {M : C} (f : S M) : Prop :=
+abbrev isNonSingular {M : C} (f : Sesq M) : Prop :=
   IsIso f
 
 -- To guarantee that S(M) is an abelian group, we require the category C
@@ -88,7 +88,7 @@ Because C is a preadditive category, every Hom-set in C is automatically
 an abelian group. S(M) trivially inherits this structure.
 --/
 
-instance (M : C) : AddCommGroup (S M) :=
+instance (M : C) : AddCommGroup (Sesq M) :=
   inferInstance
 
 /-! ## λ-Hermitian Forms -/
@@ -116,14 +116,14 @@ class StarLinearDuality (R : Type*) [CommRing R] [StarRing R] (C : Type u)
 The dual form f^† : M ⟶ D(M).
 In diagrammatic order (f ≫ g), this applies η_M followed by D(f).
 --/
-def formDual {M : C} (f : S M) : S M :=
+def formDual {M : C} (f : Sesq M) : Sesq M :=
   (HermitianCategory.doubleDualIso.hom.app M) ≫ (HermitianCategory.duality.map f.op)
 
 variable [StarLinearDuality R C]
 
 /-- The dual form map is conjugate-linear: (r • f)† = r* • f†. -/
 @[simp]
-lemma formDual_smul (r : R) {M : C} (f : S M) :
+lemma formDual_smul (r : R) {M : C} (f : Sesq M) :
     formDual (r • f) = star r • formDual f := by
   dsimp [formDual]
   rw [StarLinearDuality.map_smul]
@@ -133,7 +133,7 @@ lemma formDual_smul (r : R) {M : C} (f : S M) :
 
 /-- Taking the dual form twice recovers the original form, by naturality and coherence. -/
 @[simp]
-lemma formDoubleDual {M : C} (f : S M) :
+lemma formDoubleDual {M : C} (f : Sesq M) :
   formDual (formDual f) = f := by
   -- Expand both occurrences of the dual form: f† = η_M ≫ D.map f.op.
   simp only [formDual]
@@ -171,23 +171,23 @@ Here λ is an actual cocycle, not a class in the multiplicative Tate quotient.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
 --/
-def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
+def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : Sesq M) : Prop :=
   f = ((lam : Rˣ) : R) • formDual f
 
 /-- Combine the symmetry condition with invertibility of the form morphism. -/
-abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : S M) : Prop :=
+abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : Sesq M) : Prop :=
   IsLambdaHermitian R lam f ∧ isNonSingular f
 /--
 The additive subgroup of all λ-Hermitian forms on M, including singular forms.
 Nonsingularity is imposed later on objects: it is not generally preserved by addition.
 --/
-def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (S M) where
+def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
   carrier := { f | IsLambdaHermitian R lam f }
 
   zero_mem' := by
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq, formDual]
     -- Isolate the functor's zero mapping:
-    have H_zero : HermitianCategory.duality.map (0 : S M).op = 0 := by
+    have H_zero : HermitianCategory.duality.map (0 : Sesq M).op = 0 := by
       exact Functor.map_zero HermitianCategory.duality _ _
 
     rw [H_zero]
@@ -243,14 +243,14 @@ abbrev LambdaHermitianForm (M : C) (lam : Z1Mul R) : Type v :=
 
 /-- If `r` is invariant under the involution (self-adjoint), scalar multiplication
 preserves λ-Hermitian forms. -/
-lemma IsLambdaHermitian.smul {M : C} {lam : Z1Mul R} {f : S M}
+lemma IsLambdaHermitian.smul {M : C} {lam : Z1Mul R} {f : Sesq M}
     (hf : IsLambdaHermitian R lam f) {r : R} (hr : IsSelfAdjoint r) :
     IsLambdaHermitian R lam (r • f) := by
   dsimp [IsLambdaHermitian] at *
   calc r • f
     -- Apply scalar multiplication to the equality hf without rewriting f
     -- inside the expression on its right-hand side.
-    _ = r • (((lam : Rˣ) : R) • formDual f) := congrArg (fun g : S M => r • g) hf
+    _ = r • (((lam : Rˣ) : R) • formDual f) := congrArg (fun g : Sesq M => r • g) hf
     _ = ((lam : Rˣ) : R) • (r • formDual f) := by rw [smul_comm]
     _ = ((lam : Rˣ) : R) • (star r • formDual f) := by rw [hr]
     _ = ((lam : Rˣ) : R) • formDual (r • f) := by rw [formDual_smul]
@@ -348,3 +348,24 @@ instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
     -- h1 is an existential proof, so package it as IsIso before pairing it with h2.
     exact ⟨IsIso.mk h1, h2⟩
   ⟩
+
+abbrev HermitianFormCat (lam : Z1Mul R) : Type _ :=
+  HermitianObject (C := C) R lam
+
+
+/-! ## Duality preserving functors -/
+
+variable {C : Type u} [Category.{v} C] [HermitianCategory C]
+variable {D : Type u} [Category.{v} D] [HermitianCategory D]
+
+structure DualityPreservingFunctor (functor : C ⥤ D) where
+  nat_iso : functor.op ⋙ (HermitianCategory.duality (C := D)) ≅ (HermitianCategory.duality (C := C) ⋙ functor)
+  coherence : ∀ X : C,
+    functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app X) =
+    (HermitianCategory.doubleDualIso (C := D)).hom.app (functor.obj X) ≫
+    (HermitianCategory.duality (C := D)).map (nat_iso.inv.app (op X)).op ≫
+    nat_iso.hom.app (op ((HermitianCategory.duality (C := C)).obj (op X)))
+
+def mapSesqForms {M : C} (F : C ⥤ D)
+ (hf : DualityPreservingFunctor F) (h : Sesq M) : Sesq (F.obj M) :=
+  (F.map h) ≫ (hf.nat_iso.inv.app (op M))
