@@ -5,17 +5,41 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read # Read access to repository contents
-  pages: write # Write access to GitHub Pages
-  id-token: write # Write access to ID tokens
+  contents: read
 
 jobs:
   build:
+    name: Build Lean library
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v5
       - uses: leanprover/lean-action@v1
+
+  documentation:
+    name: Build and deploy documentation
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v5
+      # Each job has its own runner. Restore the build cache and prepare Lean
+      # before docgen builds the documentation and deploys it to Pages.
+      - name: Prepare Lean and dependencies
+        uses: leanprover/lean-action@v1
+        with:
+          build: 'false'
+          test: 'false'
+          lint: 'false'
       - uses: leanprover-community/docgen-action@v1

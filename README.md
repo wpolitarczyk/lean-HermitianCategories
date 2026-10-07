@@ -71,4 +71,4 @@ lake build
 
 The checked-in `lake-manifest.json` records dependency revisions. Use `lake update` when intentionally refreshing dependency resolution.
 
-The default build target imports all project modules through `HermitianCategories.lean`. GitHub Actions is configured to build the project and generate documentation on pushes and pull requests.
+The default build target imports all project modules through `HermitianCategories.lean`. GitHub Actions builds the project on pushes, pull requests, and manual runs. After a successful build on a push to `master`, a separate job generates the API documentation and publishes it to GitHub Pages. Documentation deployments run one at a time.
