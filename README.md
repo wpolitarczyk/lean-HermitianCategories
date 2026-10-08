@@ -8,7 +8,7 @@ This repository develops a Lean 4 formalization of **Hermitian categories** (cat
 
 ## Overview
 
-A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $ D : \mathcal{C}^{\text{op}} \to \mathcal{C} $, a natural isomorphism $ \eta \colon \text{Id}_{\mathcal{C}} \cong D^2 $, and a coherence condition $ D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)} $.
+A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $ D \colon \mathcal{C}^{\text{op}} \to \mathcal{C} $, a natural isomorphism $ \eta \colon \text{Id}_{\mathcal{C}} \cong D^2 $, and a coherence condition $ D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)} $.
 
 The current formalization includes:
 
