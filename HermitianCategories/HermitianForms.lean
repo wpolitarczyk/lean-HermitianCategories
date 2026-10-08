@@ -410,12 +410,13 @@ def mapHermitianObjects
   (hf : DualityPreservingFunctor functor)
   (lam eta : Z1Mul R)
   (hermf : HermitianFunctor R functor hf eta)
-  (hspace : HermitianObject (C := C) R lam) : HermitianObject (C := D) R (eta * lam) where
-    M := sorry
+  (X : HermitianObject (C := C) R lam) : HermitianObject (C := D) R (eta * lam) where
+    M := functor.obj X.M
 
-    form := sorry
+    form := mapHermitianForms R functor hf lam eta hermf X.form
 
-    nonsingular := sorry
+    nonsingular := (mapHermitianForms R functor hf lam eta hermf X.form).
+      sorry
 
 def mapIsometry
   (hf : DualityPreservingFunctor functor)
@@ -424,16 +425,29 @@ def mapIsometry
   (X Y : HermitianObject (C := C) R lam)
   (hisom : Isometry R lam X.form Y.form) :
    Isometry R (eta * lam) (mapHermitianObjects R functor hf lam eta hermf X).form (mapHermitianObjects R functor hf lam eta hermf Y).form where
-   val := sorry
+   val := functor.map hisom.val
 
-   property := sorry
+   property := by
+    -- inferInstance
+    simp only [isIsometryLambdaHermitianForms]
+    constructor
+    · let : IsIso hisom.val := hisom.property.1
+      apply Functor.map_isIso functor hisom.val
+
+    · sorry
 
 def functorHermitianCategories
-  (hf: DualityPreservingFunctor functor)
+  (hf : DualityPreservingFunctor functor)
   (lam eta : Z1Mul R)
-  (hermf: HermitianFunctor R functor hf eta) : HermitianFormCat (C := C) R lam ⥤ HermitianFormCat (C := D) R (eta * lam) where
-    obj := sorry
+  (hermf : HermitianFunctor R functor hf eta) : HermitianFormCat (C := C) R lam ⥤ HermitianFormCat (C := D) R (eta * lam) where
+    obj := mapHermitianObjects R functor hf lam eta hermf
 
-    map := sorry
+    map := mapIsometry R functor hf lam eta hermf _ _
+
+    map_id := by
+      intro X
+      sorry
+
+    map_comp := sorry
 
 /- The scaling functor as a special case of a Hermitian functor. -/

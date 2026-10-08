@@ -129,3 +129,8 @@ def mapSesqFormsHom (M : C) (hf : DualityPreservingFunctor functor) : Sesq M →
     unfold mapSesqForms
     intro x y
     rw [Functor.Additive.map_add, Preadditive.add_comp]
+
+lemma mapNonsingularSesqForm (M : C) (hf : DualityPreservingFunctor functor) (h : Sesq M) (h_nonsing : isNonSingular h) :
+  isNonSingular (mapSesqForms functor hf h) := by
+
+  sorry
