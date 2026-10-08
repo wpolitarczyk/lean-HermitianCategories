@@ -423,7 +423,7 @@ def mapIsometry
   (hermf : HermitianFunctor R functor hf eta)
   (X Y : HermitianObject (C := C) R lam)
   (hisom : Isometry R lam X.form Y.form) :
-   Isometry R (eta * lam) (mapHermitianObjects hf lam eta hermf X) (mapHermitianObjects hf lam eta hermf Y) where
+   Isometry R (eta * lam) (mapHermitianObjects R functor hf lam eta hermf X).form (mapHermitianObjects R functor hf lam eta hermf Y).form where
    val := sorry
 
    property := sorry
