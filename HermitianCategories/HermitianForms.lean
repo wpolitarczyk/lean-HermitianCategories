@@ -415,8 +415,11 @@ def mapHermitianObjects
 
     form := mapHermitianForms R functor hf lam eta hermf X.form
 
-    nonsingular := (mapHermitianForms R functor hf lam eta hermf X.form).
-      sorry
+    nonsingular := by
+      letI : IsIso X.form.val := X.nonsingular
+      change IsIso
+        (functor.map X.form.val ≫ hf.nat_iso.inv.app (op X.M))
+      infer_instance
 
 def mapIsometry
   (hf : DualityPreservingFunctor functor)
@@ -434,7 +437,29 @@ def mapIsometry
     · let : IsIso hisom.val := hisom.property.1
       apply Functor.map_isIso functor hisom.val
 
-    · sorry
+    · let DC := HermitianCategory.duality (C := C)
+      let DD := HermitianCategory.duality (C := D)
+      let θ := hf.nat_iso.inv.app
+
+      -- Naturality relates the two ways of dualizing the mapped isometry.
+      have nat : functor.map (DC.map hisom.val.op) ≫ θ (op X.M) =
+          θ (op Y.M) ≫ DD.map (functor.map hisom.val).op := by
+        simpa [DC, DD, θ] using
+          hf.nat_iso.inv.naturality hisom.val.op
+
+      change functor.map hisom.val ≫
+          (functor.map Y.form.val ≫ θ (op Y.M)) ≫
+          DD.map (functor.map hisom.val).op =
+        functor.map X.form.val ≫ θ (op X.M)
+
+      simp only [Category.assoc]
+      rw [← nat]
+
+      -- Apply the functor to the original form-preservation equation,
+      -- then postcompose with the inverse comparison.
+      simpa only [Functor.map_comp, Category.assoc] using
+        congrArg (fun k => functor.map k ≫ θ (op X.M))
+          hisom.property.2
 
 def functorHermitianCategories
   (hf : DualityPreservingFunctor functor)
@@ -446,8 +471,17 @@ def functorHermitianCategories
 
     map_id := by
       intro X
-      sorry
+      apply Subtype.ext
+      exact functor.map_id X.M
 
-    map_comp := sorry
+    map_comp := by
+      intro f g Z f1 g1
+      apply Subtype.ext
+      apply functor.map_comp f1.val g1.val
 
 /- The scaling functor as a special case of a Hermitian functor. -/
+
+def scalingFunctorCat (s : Rˣ) : DualityPreservingFunctor (Functor.id C) where
+  nat_iso := sorry
+
+  coherence := sorry
