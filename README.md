@@ -4,11 +4,11 @@
 
 This repository develops a Lean 4 formalization of **Hermitian categories** (categories with duality), sesquilinear and λ-Hermitian forms, and functors compatible with duality. It also includes explicit Tate cohomology constructions for commutative rings with involution.
 
-**Documentation:** [Browse the project documentation](https://wpolitarczyk.github.io/lean-HermitianCategories/).
+**Documentation:** [Browse the project documentation](https://wpolitarczyk.github.io/lean-HermitianCategories/docs/).
 
 ## Overview
 
-A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $D : \mathcal{C}^{\text{op}} \to \mathcal{C}$, a natural isomorphism $\eta : \text{Id}_{\mathcal{C}} \cong D^2$, and a coherence condition $D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)}$.
+A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $ D : \mathcal{C}^{\text{op}} \to \mathcal{C} $, a natural isomorphism $ \eta \colon \text{Id}_{\mathcal{C}} \cong D^2 $, and a coherence condition $ D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)} $.
 
 The current formalization includes:
 
@@ -37,8 +37,8 @@ import HermitianCategories
 
 The concrete Hermitian structures below are planned and are **not yet implemented**:
 
-- [ ] **Finitely generated projective modules:** construct the Hermitian structure from $P \mapsto \operatorname{Hom}_R(P,R)$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
-- [ ] **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $A \mapsto \operatorname{Hom}(A,\mathbb{Q}/\mathbb{Z})$, and prove the double-dual isomorphism and coherence.
+- [ ] **Finitely generated projective modules:** construct the Hermitian structure from $P \mapsto Hom_R(P,R)$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
+- [ ] **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $A \mapsto Hom(A,\mathbb{Q}/\mathbb{Z})$, and prove the double-dual isomorphism and coherence.
 
 Further work on functors:
 
