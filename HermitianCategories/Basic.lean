@@ -130,7 +130,10 @@ def mapSesqFormsHom (M : C) (hf : DualityPreservingFunctor functor) : Sesq M →
     intro x y
     rw [Functor.Additive.map_add, Preadditive.add_comp]
 
-lemma mapNonsingularSesqForm (M : C) (hf : DualityPreservingFunctor functor) (h : Sesq M) (h_nonsing : isNonSingular h) :
-  isNonSingular (mapSesqForms functor hf h) := by
-
-  sorry
+lemma mapNonsingularSesqForm (M : C)
+    (hf : DualityPreservingFunctor functor)
+    (h : Sesq M) (h_nonsing : isNonSingular h) :
+    isNonSingular (mapSesqForms functor hf h) := by
+  let _ : IsIso h := h_nonsing
+  change IsIso (functor.map h ≫ hf.nat_iso.inv.app (op M))
+  infer_instance
