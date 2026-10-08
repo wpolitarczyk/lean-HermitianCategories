@@ -330,6 +330,8 @@ def HermitianFunctor (hf : DualityPreservingFunctor functor)
 variable [Functor.Additive (HermitianCategory.duality (C := D))]
 variable [Functor.Additive functor] [Functor.Linear R functor]
 
+/-- Transport λ-Hermitian forms to (eta * λ)-Hermitian forms.
+For the convention h† = λ • h, compatibility gives T(h)† = eta • T(h†). -/
 def mapHermitianForms {M : C}
     (hf : DualityPreservingFunctor functor)
     (lam eta : Z1Mul R)
@@ -339,7 +341,59 @@ def mapHermitianForms {M : C}
   refine ⟨mapSesqForms functor hf h.val, ?_⟩
   change IsLambdaHermitian R (eta * lam)
     (mapSesqForms functor hf h.val)
-  sorry
+  simp only [IsLambdaHermitian, mapSesqForms, formDual]
+  let F := functor
+  let θ := hf.nat_iso.inv.app
+  let DD := HermitianCategory.duality (C := D)
+  let η := HermitianCategory.doubleDualIso (C := D)
+  change η.hom.app (F.obj M) ≫ DD.map (F.map h ≫ θ (op M)).op =
+    ((eta * lam : Rˣ) : R) • (F.map h ≫ θ (op M))
+
+  let DC := HermitianCategory.duality (C := C)
+  let j := HermitianCategory.doubleDualIso (C := C)
+  let N := DC.obj (op M)
+
+  -- Naturality of the inverse comparison.
+  have nat : F.map (DC.map h.val.op) ≫ θ (op M) =
+      θ (op N) ≫ DD.map (F.map h.val).op := by
+    simpa [F, DC, DD, θ, N] using
+      hf.nat_iso.inv.naturality h.val.op
+
+  -- The duals of the comparison and its inverse cancel.
+  have cancel_dual : DD.map (θ (op M)).op ≫
+      DD.map (hf.nat_iso.hom.app (op M)).op = 𝟙 _ := by
+    rw [← DD.map_comp, ← op_comp]
+    simp [θ]
+
+  -- Express the Hermitian condition using the inverse comparison.
+  have compat : η.hom.app (F.obj M) ≫ DD.map (θ (op M)).op =
+      ((eta : Rˣ) : R) • (F.map (j.hom.app M) ≫ θ (op N)) := by
+    have hc := congrArg
+      (fun k =>
+        η.hom.app (F.obj M) ≫
+          DD.map (θ (op M)).op ≫ k ≫ θ (op N))
+      (hermf M)
+
+    simp only [Linear.comp_smul, Linear.smul_comp, Category.assoc] at hc
+    rw [← Category.assoc (DD.map (θ (op M)).op)
+      (DD.map (hf.nat_iso.hom.app (op M)).op),
+      cancel_dual, Category.id_comp] at hc
+    simp only [θ, N, DC, DD, η, F, Iso.hom_inv_id_app,
+      Iso.hom_inv_id_app_assoc] at hc
+
+    -- Reduce the object expressions before cancelling the remaining identity.
+    dsimp at hc
+    simp only [Category.comp_id] at hc
+
+    exact hc
+
+  -- Move the adjoint through transport, then use h† = λ • h.
+  rw [op_comp, DD.map_comp, ← Category.assoc, compat, Linear.smul_comp,
+    Category.assoc, ← nat, ← Category.assoc, ← F.map_comp]
+  change ((eta : Rˣ) : R) • (F.map (formDual h.val) ≫ θ (op M)) = _
+  rw [h.property, Functor.Linear.map_smul, Linear.smul_comp, smul_smul]
+  simp only [Units.val_mul]
+
 
 def mapHermitianFormsHom {M : C}
   (hf : DualityPreservingFunctor functor)
