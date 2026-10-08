@@ -16,8 +16,9 @@ import Mathlib.CategoryTheory.Preadditive.Opposite
 /-!
 # Hermitian Categories
 
-This file defines categories with duality, sesquilinear forms, and functors equipped
-with a compatible comparison of dualities. `HermitianForms` adds λ-Hermitian forms
+This file defines categories with duality, sesquilinear forms, and natural comparisons
+of dualities, with ordinary double-dual coherence as a separate requirement.
+`HermitianForms` adds λ-Hermitian forms
 and their isometries, using the parameters from `TateCohomology`.
 
 Composition is written in diagrammatic order: `f ≫ g` means first f, then g.
@@ -25,9 +26,8 @@ For `D : Cᵒᵖ ⥤ C`, the dual of an object M is `D.obj (op M)`, whereas the 
 of a morphism f is `D.map f.op`. Taking opposites reverses the arrows; D itself
 is an ordinary covariant functor whose domain is the opposite category.
 
-Sesquilinear forms and their transport along a duality preserving functor require
-only the categorical dualities. Preadditivity additionally gives each space of
-forms an abelian group structure.
+Transport of sesquilinear forms requires only a natural comparison of dualities.
+Preadditivity additionally gives each space of forms an abelian group structure.
 -/
 
 set_option linter.style.emptyLine false
@@ -93,12 +93,17 @@ instance (M : C) : AddCommGroup (Sesq M) :=
 variable {C : Type u} [Category.{v} C] [HermitianCategory C]
 variable {D : Type u} [Category.{v} D] [HermitianCategory D]
 
-/-- A choice of comparison between the dualities, compatible with double duals.
+/-- A natural comparison between the dualities, without a coherence condition.
 The underlying functor is a parameter; this structure supplies its additional data. -/
-structure DualityPreservingFunctor (functor : C ⥤ D) where
+structure DualityComparison (functor : C ⥤ D) where
   /-- At `op X`, the forward component goes from D_D(F(X)) to F(D_C(X)).
   Here D_C and D_D denote the dualities on C and D respectively. -/
   nat_iso : functor.op ⋙ (HermitianCategory.duality (C := D)) ≅ (HermitianCategory.duality (C := C) ⋙ functor)
+
+/-- A comparison satisfying ordinary double-dual coherence.
+Use `toDualityComparison` to supply its comparison to the transport constructions. -/
+structure DualityPreservingFunctor (functor : C ⥤ D)
+    extends DualityComparison functor where
   /-- Both sides go from F(X) to F(D_C²(X)). The right side first uses the
   double-dual map in D, then the dual of the inverse comparison at X, and finally
   the forward comparison at D_C(X). Naturality alone does not impose this condition. -/
@@ -113,12 +118,12 @@ structure DualityPreservingFunctor (functor : C ⥤ D) where
 D_D(F(M)). The component is evaluated at `op M` because the comparison is
 between functors on Cᵒᵖ. This construction itself does not use coherence. -/
 def mapSesqForms {M : C} (F : C ⥤ D)
- (hf : DualityPreservingFunctor F) (h : Sesq M) : Sesq (F.obj M) :=
+ (hf : DualityComparison F) (h : Sesq M) : Sesq (F.obj M) :=
   (F.map h) ≫ (hf.nat_iso.inv.app (op M))
 
 variable [Preadditive C] [Preadditive D] (functor : C ⥤ D) [Functor.Additive functor]
 
-def mapSesqFormsHom (M : C) (hf : DualityPreservingFunctor functor) : Sesq M →+ Sesq (functor.obj M) where
+def mapSesqFormsHom (M : C) (hf : DualityComparison functor) : Sesq M →+ Sesq (functor.obj M) where
   toFun := mapSesqForms functor hf
 
   map_zero' := by
@@ -131,7 +136,7 @@ def mapSesqFormsHom (M : C) (hf : DualityPreservingFunctor functor) : Sesq M →
     rw [Functor.Additive.map_add, Preadditive.add_comp]
 
 lemma mapNonsingularSesqForm (M : C)
-    (hf : DualityPreservingFunctor functor)
+    (hf : DualityComparison functor)
     (h : Sesq M) (h_nonsing : isNonSingular h) :
     isNonSingular (mapSesqForms functor hf h) := by
   let _ : IsIso h := h_nonsing

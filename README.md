@@ -15,8 +15,9 @@ The current formalization includes:
 - **Sesquilinear forms:** `Sesq M` is the morphism space $M \to D(M)$, with an abelian group structure when the category is preadditive.
 - **Adjoints and λ-Hermitian forms:** the adjoint operation `formDual` is involutive. For a norm-one unit $\lambda$, the condition is $h^\dagger = \lambda \cdot h$. Under the specified additivity and linearity assumptions, these forms constitute an additive subgroup; `StarLinearDuality` expresses conjugate-linearity of the duality.
 - **Nonsingular objects and isometries:** `HermitianObject` packages a λ-Hermitian form whose underlying morphism is an isomorphism. `HermitianFormCat` names the resulting category, with invertible form-preserving morphisms as its isometries.
-- **Duality preserving functors:** a functor together with a natural comparison isomorphism and double-dual coherence. `mapSesqForms` transports sesquilinear forms, and `mapSesqFormsHom` packages this map as an additive homomorphism when the functor is additive.
-- **Transport of Hermitian forms:** with the stated linearity assumptions and a proof of `HermitianFunctor R functor hf eta`, `mapHermitianForms` sends λ-Hermitian forms to `(eta * lam)`-Hermitian forms.
+- **Comparisons of dualities:** `DualityComparison` supplies a natural comparison isomorphism; `DualityPreservingFunctor` additionally requires ordinary double-dual coherence. `mapSesqForms` needs only the comparison, and `mapSesqFormsHom` packages transport as an additive homomorphism when the functor is additive.
+- **Transport of Hermitian forms:** with the stated linearity assumptions and scalar-dependent compatibility `HermitianFunctor R functor hf eta`, `mapHermitianForms` sends λ-Hermitian forms to `(eta * lam)`-Hermitian forms. `mapHermitianFormsHom` gives the additive homomorphism, and `functorHermitianCategories` gives the induced functor on nonsingular Hermitian objects and isometries.
+- **Scaling:** `scalingFunctorCat R s` equips the identity functor with comparison components `s • 𝟙`. Its induced `scalingHermitianCategories R s lam` scales forms by `s⁻¹`, changes their parameter to `(scalingParameter R s * lam)`, where `scalingParameter R s = s * star (s⁻¹)`, and leaves underlying isometry morphisms unchanged.
 - **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $r + r^* = 1$ implies vanishing of both additive groups.
 
 ## Project Layout
@@ -25,7 +26,7 @@ The current formalization includes:
 | --- | --- |
 | [Basic.lean](HermitianCategories/Basic.lean) | Categories with duality, sesquilinear forms, duality preserving functors, and additive transport of forms. |
 | [TateCohomology.lean](HermitianCategories/TateCohomology.lean) | Cycles, boundaries, quotient groups, generalized half-units, and the norm-one unit subgroup `Z1Mul`. |
-| [HermitianForms.lean](HermitianCategories/HermitianForms.lean) | Adjoints, λ-Hermitian forms, nonsingular objects, isometries, and work on Hermitian functors. Imports both modules above. |
+| [HermitianForms.lean](HermitianCategories/HermitianForms.lean) | Adjoints, λ-Hermitian forms, nonsingular objects, isometries, transport by Hermitian functors, and scaling. Imports both modules above. |
 | [HermitianCategories.lean](HermitianCategories.lean) | Library entry point importing all three modules. |
 
 To use the full library:
@@ -43,11 +44,9 @@ The concrete Hermitian structures below are planned and are **not yet implemente
 
 Further work on functors:
 
-- [ ] Complete `mapHermitianFormsHom`, the induced additive homomorphism on λ-Hermitian forms.
-- [ ] Establish composition properties of Hermitian functors and construct the induced functors between categories of Hermitian objects.
-- [ ] Develop the scaling functor as an example.
+- [ ] Establish composition properties of Hermitian functors.
 
-`HermitianFunctor` currently defines an additional scalar-dependent condition on a `DualityPreservingFunctor`, which already carries its own coherence condition. `mapHermitianFormsHom` still contains `sorry` placeholders; a successful build does not certify that unfinished construction.
+`HermitianFunctor` imposes scalar-dependent compatibility on a `DualityComparison`; ordinary coherence is not an additional prerequisite for this transport. To use an ordinary `DualityPreservingFunctor` with the transport constructions, pass its `.toDualityComparison` field.
 
 ## Development Environment
 
