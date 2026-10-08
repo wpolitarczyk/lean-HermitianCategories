@@ -120,14 +120,14 @@ lemma formDoubleDual {M : C} (f : Sesq M) :
   rw [Category.comp_id]
 
 /--
-A sesquilinear form f is λ-Hermitian if f = λ • f^†.
+A sesquilinear form f is λ-Hermitian if f^† = λ • f.
 The type `Z1Mul R` ensures λ is a unit satisfying λ * star λ = 1.
 Here λ is an actual cocycle, not a class in the multiplicative Tate quotient.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
 --/
 def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : Sesq M) : Prop :=
-  f = ((lam : Rˣ) : R) • formDual f
+  formDual f = ((lam : Rˣ) : R) • f
 
 /-- Combine the symmetry condition with invertibility of the form morphism. -/
 abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : Sesq M) : Prop :=
@@ -152,14 +152,8 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
   add_mem' := by
     intro f g hf hg
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
-    calc f + g
-      _ = ((lam : Rˣ) : R) • formDual f + ((lam : Rˣ) : R) • formDual g := by
-        -- Restrict rewriting to the left side, so f and g inside the target
-        -- adjoints are not themselves replaced by their Hermitian expressions.
-        conv_lhs => rw [hf, hg]
-      _ = ((lam : Rˣ) : R) • (formDual f + formDual g) := by rw [← smul_add]
-      _ = ((lam : Rˣ) : R) • formDual (f + g) := by
-        congr 1
+    calc formDual (f + g)
+      _ = formDual f + formDual g := by
         simp only [formDual]
         rw [← CategoryTheory.Preadditive.comp_add]
 
@@ -169,16 +163,15 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
           exact (Functor.map_add HermitianCategory.duality).symm
 
         rw [H_add]
+      -- Substitute the Hermitian equations for the two adjoints.
+      _ = ((lam : Rˣ) : R) • f + ((lam : Rˣ) : R) • g := by rw [hf, hg]
+      _ = ((lam : Rˣ) : R) • (f + g) := by rw [smul_add]
 
   neg_mem' := by
     intro f hf
     simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
-    calc -f
-      _ = - (((lam : Rˣ) : R) • formDual f) := by
-        conv_lhs => rw [hf]
-      _ = ((lam : Rˣ) : R) • -(formDual f) := by rw [← smul_neg]
-      _ = ((lam : Rˣ) : R) • formDual (-f) := by
-        congr 1
+    calc formDual (-f)
+      _ = -formDual f := by
         simp only [formDual]
         rw [← CategoryTheory.Preadditive.comp_neg]
 
@@ -187,6 +180,8 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
           exact (Functor.map_neg HermitianCategory.duality).symm
 
         rw [H_neg]
+      _ = -(((lam : Rˣ) : R) • f) := by rw [hf]
+      _ = ((lam : Rˣ) : R) • (-f) := by rw [smul_neg]
 
 /--
 A λ-Hermitian form on M is an element of the subgroup of λ-Hermitian forms.
@@ -202,13 +197,11 @@ lemma IsLambdaHermitian.smul {M : C} {lam : Z1Mul R} {f : Sesq M}
     (hf : IsLambdaHermitian R lam f) {r : R} (hr : IsSelfAdjoint r) :
     IsLambdaHermitian R lam (r • f) := by
   dsimp [IsLambdaHermitian] at *
-  calc r • f
-    -- Apply scalar multiplication to the equality hf without rewriting f
-    -- inside the expression on its right-hand side.
-    _ = r • (((lam : Rˣ) : R) • formDual f) := congrArg (fun g : Sesq M => r • g) hf
-    _ = ((lam : Rˣ) : R) • (r • formDual f) := by rw [smul_comm]
-    _ = ((lam : Rˣ) : R) • (star r • formDual f) := by rw [hr]
-    _ = ((lam : Rˣ) : R) • formDual (r • f) := by rw [formDual_smul]
+  calc formDual (r • f)
+    _ = star r • formDual f := by rw [formDual_smul]
+    -- Self-adjoint scalars are fixed by star, so the parameter λ is unchanged.
+    _ = r • (((lam : Rˣ) : R) • f) := by rw [hr, hf]
+    _ = ((lam : Rˣ) : R) • (r • f) := by rw [smul_comm]
 
 /--
 An isometry is an invertible morphism that pulls back the target form to the source form.
