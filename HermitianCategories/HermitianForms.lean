@@ -219,7 +219,7 @@ The type of all isometries between two specific λ-Hermitian forms.
 For an element f of this subtype, `f.val` is the underlying morphism in C.
 The proofs `f.property.1` and `f.property.2` assert invertibility and form preservation.
 -/
-def Isometries {M N : C} (lam : Z1Mul R)
+def Isometry {M N : C} (lam : Z1Mul R)
   (hM : LambdaHermitianForm R M lam)
   (hN : LambdaHermitianForm R N lam) : Type v :=
   { f : M ⟶ N // isIsometryLambdaHermitianForms R lam hM hN f }
@@ -244,7 +244,7 @@ subtype morphisms reduces to equality of their underlying morphisms in C.
 -/
 instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
   -- The hom-set between X and Y is the subtype of isometries
-  Hom X Y := Isometries R lam X.form Y.form
+  Hom X Y := Isometry R lam X.form Y.form
 
   -- Pair the underlying identity with the two proofs required of an isometry.
   id X := ⟨𝟙 X.M, by
@@ -405,5 +405,35 @@ def mapHermitianFormsHom {M : C}
     apply (mapSesqFormsHom functor M hf).map_add h.val k.val
 
 /- Hermitian functors induce functors of the respective categories of Hermitian objects. -/
+
+def mapHermitianObjects
+  (hf : DualityPreservingFunctor functor)
+  (lam eta : Z1Mul R)
+  (hermf : HermitianFunctor R functor hf eta)
+  (hspace : HermitianObject (C := C) R lam) : HermitianObject (C := D) R (eta * lam) where
+    M := sorry
+
+    form := sorry
+
+    nonsingular := sorry
+
+def mapIsometry
+  (hf : DualityPreservingFunctor functor)
+  (lam eta : Z1Mul R)
+  (hermf : HermitianFunctor R functor hf eta)
+  (X Y : HermitianObject (C := C) R lam)
+  (hisom : Isometry R lam X.form Y.form) :
+   Isometry R (eta * lam) (mapHermitianObjects hf lam eta hermf X) (mapHermitianObjects hf lam eta hermf Y) where
+   val := sorry
+
+   property := sorry
+
+def functorHermitianCategories
+  (hf: DualityPreservingFunctor functor)
+  (lam eta : Z1Mul R)
+  (hermf: HermitianFunctor R functor hf eta) : HermitianFormCat (C := C) R lam ⥤ HermitianFormCat (C := D) R (eta * lam) where
+    obj := sorry
+
+    map := sorry
 
 /- The scaling functor as a special case of a Hermitian functor. -/
