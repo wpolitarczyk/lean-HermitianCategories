@@ -393,11 +393,16 @@ def mapHermitianFormsHom {M : C}
   (lam eta : Z1Mul R)
   (hermf : HermitianFunctor R functor hf eta) :
   LambdaHermitianForm R M lam →+ LambdaHermitianForm R (functor.obj M) (eta * lam) where
-  toFun := sorry
+  toFun := mapHermitianForms R functor hf lam eta hermf
 
-  map_zero' := sorry
+  map_zero' := by
+    apply Subtype.ext
+    apply (mapSesqFormsHom functor M hf).map_zero
 
-  map_add' := sorry
+  map_add' := by
+    intro h k
+    apply Subtype.ext
+    apply (mapSesqFormsHom functor M hf).map_add h.val k.val
 
 /- Hermitian functors induce functors of the respective categories of Hermitian objects. -/
 
