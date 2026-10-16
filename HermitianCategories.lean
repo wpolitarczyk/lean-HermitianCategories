@@ -2,6 +2,7 @@ import HermitianCategories.Basic
 import HermitianCategories.HermitianForms
 import HermitianCategories.HermitianFunctors
 import HermitianCategories.TateCohomology
+import HermitianCategories.QuadraticForms
 
 /-!
 # HermitianCategories library entry point
@@ -15,3 +16,6 @@ induced equivalences, and scaling in `HermitianFunctors`.
 builds on `HermitianForms`. Keep the project's modules
 reachable from this entry point so the default library build checks them.
 -/
+
+
+
