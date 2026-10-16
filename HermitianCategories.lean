@@ -1,7 +1,6 @@
 import HermitianCategories.Basic
 import HermitianCategories.HermitianForms
 import HermitianCategories.TateCohomology
-import HermitianCategories.QuadraticForms.lean
 
 /-!
 # HermitianCategories library entry point
