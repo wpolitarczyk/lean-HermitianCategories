@@ -29,6 +29,12 @@ Preadditivity supplies addition of forms; `Linear R C` supplies scalar multiplic
 Additivity of the duality makes adjoints additive, while `StarLinearDuality` makes
 them conjugate-linear. The involutivity proof uses naturality and coherence of
 the double-dual isomorphism.
+
+The transport constructions send a λ-Hermitian form to an (eta * λ)-Hermitian
+form using a duality comparison with scalar compatibility `eta`. In particular,
+`scalingHermitianCategories R s lam` multiplies forms by `s⁻¹` and changes their
+parameter by `scalingParameter R s`. The final theorem proves that this scaling
+functor is an equivalence, with inverse scaling by `s⁻¹` and a parameter cast.
 -/
 
 open CategoryTheory
@@ -51,7 +57,7 @@ variable [Linear R C]
 -- preadditive categories need not preserve sums of morphisms.
 variable [Functor.Additive (HermitianCategory.duality (C := C))]
 
-/-! ## λ-Hermitian Forms -/
+/-! ## Adjoints and their additive structure -/
 
 set_option linter.style.emptyLine false
 set_option linter.style.docString false
@@ -70,26 +76,39 @@ class StarLinearDuality (R : Type*) [CommRing R] [StarRing R] (C : Type u)
 /--
 The dual form f^† : M ⟶ D(M).
 In diagrammatic order (f ≫ g), this applies η_M followed by D(f).
---/
+Here f.op : op (D(M)) ⟶ op M, so D(f.op) : D²(M) ⟶ D(M);
+the double-dual map η_M supplies the missing arrow from M to D²(M).
+-/
 def formDual {M : C} (f : Sesq M) : Sesq M :=
   (HermitianCategory.doubleDualIso.hom.app M) ≫ (HermitianCategory.duality.map f.op)
 
+/-- The adjoint of the zero form is zero. -/
 @[simp]
 lemma formDual_zero {M : C} : formDual (0 : Sesq M) = 0 := by
+  -- Opposites and the additive duality preserve zero; composition with zero is zero.
   simp [formDual]
 
+/-- Taking adjoints preserves addition of forms. -/
 @[simp]
 lemma formDual_add {M : C} (g h : Sesq M) : formDual (g+h) = formDual g + formDual h := by
+  -- The duality maps sums to sums, and precomposition with η_M distributes over them.
   simp [formDual]
 
+/-- Taking adjoints commutes with additive inverses. -/
 @[simp]
 lemma formDual_neg {M : C} (g : Sesq M) : formDual (-g) = -formDual g := by
   simp [formDual]
 
+/-- Taking adjoints preserves differences of forms. -/
 @[simp]
 lemma formDual_sub {M : C} (g h : Sesq M) : formDual (g - h) = formDual g - formDual h := by
   simp [formDual]
 
+/-- The adjoint operation bundled as an endomorphism of the abelian group `Sesq M`.
+The notation `→+` bundles a function with preservation of zero and addition;
+preservation of negation and subtraction is then available from `AddMonoidHom`.
+This construction uses additivity of the duality, without scalar compatibility.
+In general the adjoint is conjugate-linear, so this is not bundled as an R-linear map. -/
 def formDualHom (M : C) : Sesq M →+ Sesq M where
   toFun := formDual
 
@@ -97,6 +116,7 @@ def formDualHom (M : C) : Sesq M →+ Sesq M where
 
   map_add' := formDual_add
 
+-- Scalar compatibility is a separate hypothesis from the additive facts above.
 variable [StarLinearDuality R C]
 
 omit [Functor.Additive (HermitianCategory.duality (C := C))] in
@@ -110,6 +130,7 @@ lemma formDual_smul (r : R) {M : C} (f : Sesq M) :
   -- η_M ≫ (star r • D(f.op)) = star r • (η_M ≫ D(f.op))
   apply CategoryTheory.Linear.comp_smul
 
+-- Involutivity follows from the categorical duality alone; no additive laws enter.
 omit [Functor.Additive (HermitianCategory.duality (C := C))] [Preadditive C] in
 /-- Taking the dual form twice recovers the original form, by naturality and coherence. -/
 @[simp]
@@ -144,13 +165,15 @@ lemma formDoubleDual {M : C} (f : Sesq M) :
   -- Postcomposing f with the identity recovers f.
   rw [Category.comp_id]
 
+/-! ## λ-Hermitian forms and isometries -/
+
 /--
 A sesquilinear form f is λ-Hermitian if f^† = λ • f.
 The type `Z1Mul R` ensures λ is a unit satisfying λ * star λ = 1.
 Here λ is an actual cocycle, not a class in the multiplicative Tate quotient.
 We use double coercion `((lam : Rˣ) : R)` to extract the element from the subgroup
 and cast the unit into the underlying ring so it can act via scalar multiplication.
---/
+-/
 def IsLambdaHermitian {M : C} (lam : Z1Mul R) (f : Sesq M) : Prop :=
   formDual f = ((lam : Rˣ) : R) • f
 
@@ -160,7 +183,9 @@ abbrev isLambdaHermitian_and_Nonsingular {M : C} (lam : Z1Mul R) (f : Sesq M) : 
 /--
 The additive subgroup of all λ-Hermitian forms on M, including singular forms.
 Nonsingularity is imposed later on objects: it is not generally preserved by addition.
---/
+An arbitrary scalar need not preserve the parameter λ; self-adjoint scalars do,
+as shown by `IsLambdaHermitian.smul` below.
+-/
 def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
   carrier := { f | IsLambdaHermitian R lam f }
 
@@ -250,6 +275,7 @@ def Isometry {M N : C} (lam : Z1Mul R)
   { f : M ⟶ N // isIsometryLambdaHermitianForms R lam hM hN f }
 
 omit [StarLinearDuality R C] in
+/-- The identity morphism is an isometry of any λ-Hermitian form, including a singular one. -/
 lemma idIsIsometry {M : C} (lam : Z1Mul R)
   (hM : LambdaHermitianForm R M lam) : isIsometryLambdaHermitianForms R lam hM hM (𝟙 M) := by
     constructor
@@ -261,8 +287,11 @@ A nonsingular λ-Hermitian object consists of a base object M, a λ-Hermitian fo
 and a proof that its associated morphism is invertible.
 -/
 structure HermitianObject (lam : Z1Mul R) where
+  /-- The underlying object of the original category. -/
   M : C
+  /-- A form together with its λ-Hermitian symmetry proof. -/
   form : LambdaHermitianForm R M lam
+  /-- Invertibility of the underlying form morphism, imposed in addition to symmetry. -/
   nonsingular : isNonSingular form.val
 
 /--
@@ -340,7 +369,9 @@ variable {D : Type u} [Category D] [Preadditive D] [Linear R D] [HermitianCatego
 variable (functor : C ⥤ D)
 
 /-- Scalar-dependent compatibility of a comparison with the double-dual maps.
-This condition allows transport to change the Hermitian parameter by `eta`. -/
+This condition allows transport to change the Hermitian parameter by `eta`.
+The argument `hf` is comparison data for the already specified functor; this
+predicate supplies the extra compatibility needed to transport Hermitian forms. -/
 def HermitianFunctor (hf : DualityComparison functor)
     (eta : Z1Mul R) : Prop :=
   ∀ M : C,
@@ -358,7 +389,9 @@ variable [Functor.Additive (HermitianCategory.duality (C := D))]
 variable [Functor.Additive functor] [Functor.Linear R functor]
 
 /-- Transport λ-Hermitian forms to (eta * λ)-Hermitian forms.
-For the convention h† = λ • h, compatibility gives T(h)† = eta • T(h†). -/
+For the convention h† = λ • h, compatibility gives T(h)† = eta • T(h†).
+The underlying transported form is F(h) followed by the inverse comparison
+F(D(M)) ⟶ D(F(M)); this explains the use of `hf.nat_iso.inv` in the proof. -/
 def mapHermitianForms {M : C}
     (hf : DualityComparison functor)
     (lam eta : Z1Mul R)
@@ -372,6 +405,7 @@ def mapHermitianForms {M : C}
   let F := functor
   let θ := hf.nat_iso.inv.app
   let DD := HermitianCategory.duality (C := D)
+  -- Greek η here is the target double-dual isomorphism; `eta` is the scalar parameter.
   let η := HermitianCategory.doubleDualIso (C := D)
   change η.hom.app (F.obj M) ≫ DD.map (F.map h ≫ θ (op M)).op =
     ((eta * lam : Rˣ) : R) • (F.map h ≫ θ (op M))
@@ -395,6 +429,8 @@ def mapHermitianForms {M : C}
   -- Express the Hermitian condition using the inverse comparison.
   have compat : η.hom.app (F.obj M) ≫ DD.map (θ (op M)).op =
       ((eta : Rˣ) : R) • (F.map (j.hom.app M) ≫ θ (op N)) := by
+    -- Compose the compatibility equation on both sides with inverse comparison maps.
+    -- This lets us replace its forward comparison components by the inverses used in T.
     have hc := congrArg
       (fun k =>
         η.hom.app (F.obj M) ≫
@@ -422,6 +458,9 @@ def mapHermitianForms {M : C}
   simp only [Units.val_mul]
 
 
+/-- Transport of Hermitian forms bundled as an additive homomorphism.
+After `Subtype.ext` removes the symmetry proof fields, the additive laws are
+exactly those of `mapSesqFormsHom` on the underlying sesquilinear forms. -/
 def mapHermitianFormsHom {M : C}
   (hf : DualityComparison functor)
   (lam eta : Z1Mul R)
@@ -440,6 +479,8 @@ def mapHermitianFormsHom {M : C}
 
 /- Hermitian functors induce functors of the respective categories of Hermitian objects. -/
 
+/-- Transport a nonsingular Hermitian object and change its parameter to `eta * lam`.
+The transported form is a composite of two isomorphisms, so remains nonsingular. -/
 def mapHermitianObjects
   (hf : DualityComparison functor)
   (lam eta : Z1Mul R)
@@ -450,11 +491,15 @@ def mapHermitianObjects
     form := mapHermitianForms R functor hf lam eta hermf X.form
 
     nonsingular := by
+      -- Expose the stored nonsingularity proof to typeclass search. Functors preserve
+      -- isomorphisms, and the inverse comparison component is also an isomorphism.
       let : IsIso X.form.val := X.nonsingular
       change IsIso
         (functor.map X.form.val ≫ hf.nat_iso.inv.app (op X.M))
       infer_instance
 
+/-- Apply the underlying functor to an isometry between Hermitian objects.
+Naturality of the comparison ensures that the image preserves the transported forms. -/
 def mapIsometry
   (hf : DualityComparison functor)
   (lam eta : Z1Mul R)
@@ -465,7 +510,7 @@ def mapIsometry
    val := functor.map hisom.val
 
    property := by
-    -- inferInstance
+    -- Treat invertibility and preservation of the form as separate obligations.
     simp only [isIsometryLambdaHermitianForms]
     constructor
     · let : IsIso hisom.val := hisom.property.1
@@ -495,6 +540,9 @@ def mapIsometry
         congrArg (fun k => functor.map k ≫ θ (op X.M))
           hisom.property.2
 
+/-- The induced functor on categories of nonsingular Hermitian forms.
+Its identity and composition laws reduce to those of the original functor by
+comparing the underlying morphisms of the bundled isometries. -/
 def functorHermitianCategories
   (hf : DualityComparison functor)
   (lam eta : Z1Mul R)
@@ -515,24 +563,28 @@ def functorHermitianCategories
 
 /-! ## Scaling functors -/
 
-/-- The change in Hermitian parameter associated with scaling. -/
+/-- The norm-one unit σ(s) = s * star (s⁻¹) governing the change in Hermitian parameter.
+Indeed, (s⁻¹ • h)† = star (s⁻¹) • h† = (σ(s) * λ) • (s⁻¹ • h)
+when h† = λ • h. Scalars in this identity are understood as elements of R. -/
 def scalingParameter (s : Rˣ) : Z1Mul R :=
   ⟨s * star (s⁻¹), by
     change (s * star (s⁻¹)) * star (s * star (s⁻¹)) = 1
     simp [mul_comm, mul_left_comm, mul_assoc]⟩
 
-/- Scaling parameteres multiply.-/
+/-- The parameter changes associated with two units multiply. -/
 @[simp]
 lemma scalingParameter_mul (s t : Rˣ) :
   scalingParameter R (s * t) = (scalingParameter R s) * (scalingParameter R t) := by
   simp [scalingParameter]
   ac_rfl
 
+/-- Scaling by the unit 1 leaves the Hermitian parameter unchanged. -/
 @[simp]
 lemma scalingParameter_one : scalingParameter R 1 = 1 := by
   simp [scalingParameter]
 
-/-- The identity functor with comparison components `s • 𝟙`.
+/-- A duality comparison for the identity functor, with components `s • 𝟙`.
+This is comparison data, not a functor between categories of Hermitian forms.
 Transport uses the inverse comparison, so it scales forms by `s⁻¹`. -/
 def scalingFunctorCat (s : Rˣ) : DualityComparison (Functor.id C) where
   nat_iso := NatIso.ofComponents
@@ -579,6 +631,11 @@ def scalingHermitianCategories (s : Rˣ) (lam : Z1Mul R) :
     (scalingFunctorCat R s) lam (scalingParameter R s)
     (scalingFunctorCat_hermitian R s)
 
+/-- Regard a Hermitian object with parameter `lam1` as one with the equal parameter `lam2`.
+The underlying object, form morphism, and isometry morphisms are unchanged;
+only the proofs involving the parameter are transported along `h`.
+This makes an equality of parameters usable when composing functors whose
+source and target categories are not definitionally equal. -/
 def castHermitianHermitianCategories {lam1 lam2 : Z1Mul R} (h : lam1 = lam2) :
   HermitianFormCat (C := C) R lam1 ⥤ HermitianFormCat (C := C) R lam2 where
   obj X := {
@@ -591,6 +648,7 @@ def castHermitianHermitianCategories {lam1 lam2 : Z1Mul R} (h : lam1 = lam2) :
 
   map_id := by
     intro CC
+    -- Equality elimination reduces the cast to the case where both parameters coincide.
     cases h
     rfl
 
@@ -598,6 +656,11 @@ def castHermitianHermitianCategories {lam1 lam2 : Z1Mul R} (h : lam1 = lam2) :
     cases h
     rfl
 
+/-- Scaling first by s and then by t is naturally isomorphic to scaling by t * s.
+The cast identifies σ(t * s) * λ with σ(t) * (σ(s) * λ), so the functors have
+the same target category. Both sides give the same underlying forms after
+simplifying scalar multiplication; the components are identity isometries.
+The result is a natural isomorphism (`≅`), rather than an equality of functors. -/
 def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
   (scalingHermitianCategories (C := C) R s lam) ⋙ (scalingHermitianCategories (C := C) R t ((scalingParameter R s) * lam)) ≅
   (scalingHermitianCategories (C:= C) R (t * s) lam) ⋙ castHermitianHermitianCategories R (by rw [scalingParameter_mul, mul_assoc]) :=
@@ -628,24 +691,33 @@ def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
   )
   (by
     intro X Y f
+    -- Both functors preserve the underlying morphism f.val, so naturality is an identity law.
     apply Subtype.ext
     change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
     simp
   )
 
+/-- Scaling by a unit gives an equivalence between the corresponding Hermitian categories.
+The inverse uses the unit s⁻¹ and casts its resulting parameter back to λ.
+The unit and counit are constructed directly from identity isometries. -/
 lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
   Functor.IsEquivalence (scalingHermitianCategories (C := C) R s lam) := by
   let sigma s := scalingParameter R s
 
+  -- Multiplicativity of σ cancels the two parameter changes. The parentheses
+  -- match the target parameter produced by the inverse scaling functor H below.
   have h_scalingParam : (sigma s⁻¹) * ((sigma s) * lam) = lam := by
     unfold sigma
     rw [← mul_assoc, ← scalingParameter_mul, inv_mul_cancel, scalingParameter_one, one_mul]
 
   let F := scalingHermitianCategories (C := C) R s lam
+  -- H multiplies forms by s, undoing F's multiplication by s⁻¹.
   let H := scalingHermitianCategories (C := C) R s⁻¹ (sigma s * lam)
+  -- K corrects the target parameter without changing the underlying forms or arrows.
   let K := castHermitianHermitianCategories (C:= C) R h_scalingParam
   let G := H ⋙ K
 
+  -- The unit has source Id and target F ⋙ G, the orientation required by `mk'`.
   have h_eta : Functor.id (HermitianFormCat (C := C) R lam) ≅ F ⋙ G := by
     -- The two scalings cancel on forms, so each component is the identity on X.M.
     refine NatIso.ofComponents (fun X => {
@@ -660,6 +732,7 @@ lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
         · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
             functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
       hom_inv_id := by
+        -- Equality of bundled isometries reduces to equality of their underlying arrows.
         apply Subtype.ext
         change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
         simp
@@ -668,11 +741,13 @@ lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
         change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
         simp
     }) ?_
+    -- F and G act identically on underlying arrows, so identity components are natural.
     intro X Y f
     apply Subtype.ext
     change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
     simp
 
+  -- The counit lives in the target category, with parameter σ(s) * λ.
   have h_eps : G ⋙ F ≅ Functor.id (HermitianFormCat (C := C) R (sigma s * lam)) := by
     -- Cancellation in the other order gives the counit, again with identity components.
     refine NatIso.ofComponents (fun X => {
@@ -700,4 +775,6 @@ lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
     change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
     simp
 
+  -- `mk'` derives full faithfulness and essential surjectivity from this inverse data;
+  -- it does not require us to supply a separate triangle-identity proof.
   exact Functor.IsEquivalence.mk' G h_eta h_eps
