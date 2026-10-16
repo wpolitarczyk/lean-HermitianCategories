@@ -74,6 +74,29 @@ In diagrammatic order (f ≫ g), this applies η_M followed by D(f).
 def formDual {M : C} (f : Sesq M) : Sesq M :=
   (HermitianCategory.doubleDualIso.hom.app M) ≫ (HermitianCategory.duality.map f.op)
 
+@[simp]
+lemma formDual_zero {M : C} : formDual (0 : Sesq M) = 0 := by
+  simp [formDual]
+
+@[simp]
+lemma formDual_add {M : C} (g h : Sesq M) : formDual (g+h) = formDual g + formDual h := by
+  simp [formDual]
+
+@[simp]
+lemma formDual_neg {M : C} (g : Sesq M) : formDual (-g) = -formDual g := by
+  simp [formDual]
+
+@[simp]
+lemma formDual_sub {M : C} (g h : Sesq M) : formDual (g - h) = formDual g - formDual h := by
+  simp [formDual]
+
+def formDualHom (M : C) : Sesq M →+ Sesq M where
+  toFun := formDual
+
+  map_zero' := formDual_zero
+
+  map_add' := formDual_add
+
 variable [StarLinearDuality R C]
 
 omit [Functor.Additive (HermitianCategory.duality (C := C))] in
@@ -555,15 +578,6 @@ def scalingHermitianCategories (s : Rˣ) (lam : Z1Mul R) :
   functorHermitianCategories R (Functor.id C)
     (scalingFunctorCat R s) lam (scalingParameter R s)
     (scalingFunctorCat_hermitian R s)
-
-/- Scaling parameteres multiply.-/
-@[simp]
-lemma scalingParameter_mul (s t : Rˣ) :
-  scalingParameter R (s * t) = (scalingParameter R s) * (scalingParameter R t) := by
-  apply Subtype.ext
-  change (s * t) * star (s * t)⁻¹ = (s * star s⁻¹) * (t * star t⁻¹)
-  simp only [mul_inv_rev, star_mul]
-  ac_rfl
 
 def castHermitianHermitianCategories {lam1 lam2 : Z1Mul R} (h : lam1 = lam2) :
   HermitianFormCat (C := C) R lam1 ⥤ HermitianFormCat (C := C) R lam2 where
