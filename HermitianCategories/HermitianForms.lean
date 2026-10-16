@@ -76,6 +76,7 @@ def formDual {M : C} (f : Sesq M) : Sesq M :=
 
 variable [StarLinearDuality R C]
 
+omit [Functor.Additive (HermitianCategory.duality (C := C))] in
 /-- The dual form map is conjugate-linear: (r • f)† = r* • f†. -/
 @[simp]
 lemma formDual_smul (r : R) {M : C} (f : Sesq M) :
@@ -86,6 +87,7 @@ lemma formDual_smul (r : R) {M : C} (f : Sesq M) :
   -- η_M ≫ (star r • D(f.op)) = star r • (η_M ≫ D(f.op))
   apply CategoryTheory.Linear.comp_smul
 
+omit [Functor.Additive (HermitianCategory.duality (C := C))] [Preadditive C] in
 /-- Taking the dual form twice recovers the original form, by naturality and coherence. -/
 @[simp]
 lemma formDoubleDual {M : C} (f : Sesq M) :
@@ -223,6 +225,13 @@ def Isometry {M N : C} (lam : Z1Mul R)
   (hM : LambdaHermitianForm R M lam)
   (hN : LambdaHermitianForm R N lam) : Type v :=
   { f : M ⟶ N // isIsometryLambdaHermitianForms R lam hM hN f }
+
+omit [StarLinearDuality R C] in
+lemma idIsIsometry {M : C} (lam : Z1Mul R)
+  (hM : LambdaHermitianForm R M lam) : isIsometryLambdaHermitianForms R lam hM hM (𝟙 M) := by
+    constructor
+    · infer_instance
+    · simp
 
 /--
 A nonsingular λ-Hermitian object consists of a base object M, a λ-Hermitian form,
@@ -418,7 +427,7 @@ def mapHermitianObjects
     form := mapHermitianForms R functor hf lam eta hermf X.form
 
     nonsingular := by
-      letI : IsIso X.form.val := X.nonsingular
+      let : IsIso X.form.val := X.nonsingular
       change IsIso
         (functor.map X.form.val ≫ hf.nat_iso.inv.app (op X.M))
       infer_instance
@@ -535,3 +544,71 @@ def scalingHermitianCategories (s : Rˣ) (lam : Z1Mul R) :
   functorHermitianCategories R (Functor.id C)
     (scalingFunctorCat R s) lam (scalingParameter R s)
     (scalingFunctorCat_hermitian R s)
+
+/- Scaling parameteres multiply.-/
+@[simp]
+lemma scalingParameter_mul (s t : Rˣ) :
+  scalingParameter R (s * t) = (scalingParameter R s) * (scalingParameter R t) := by
+  apply Subtype.ext
+  change (s * t) * star (s * t)⁻¹ = (s * star s⁻¹) * (t * star t⁻¹)
+  simp only [mul_inv_rev, star_mul]
+  ac_rfl
+
+def castHermitianHermitianCategories {lam1 lam2 : Z1Mul R} (h : lam1 = lam2) :
+  HermitianFormCat (C := C) R lam1 ⥤ HermitianFormCat (C := C) R lam2 where
+  obj X := {
+    M := X.M
+    form := ⟨X.form.val, by rw [← h]; exact X.form.property ⟩
+    nonsingular := X.nonsingular
+  }
+
+  map f := ⟨f.val, by cases h; exact f.property ⟩
+
+  map_id := by
+    intro CC
+    cases h
+    rfl
+
+  map_comp f g := by
+    cases h
+    rfl
+
+def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
+  (scalingHermitianCategories (C := C) R s lam) ⋙ (scalingHermitianCategories (C := C) R t ((scalingParameter R s) * lam)) ≅
+  (scalingHermitianCategories (C:= C) R (t * s) lam) ⋙ castHermitianHermitianCategories R (by rw [scalingParameter_mul, mul_assoc]) :=
+  NatIso.ofComponents
+  (fun X =>
+    {
+      hom := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [scalingHermitianCategories, castHermitianHermitianCategories, functorHermitianCategories, mapHermitianObjects, mapHermitianForms]
+          simp [smul_smul, mul_comm]
+      ⟩
+      inv := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [scalingHermitianCategories, castHermitianHermitianCategories, functorHermitianCategories, mapHermitianObjects, mapHermitianForms]
+          simp [smul_smul, mul_comm]
+      ⟩
+      hom_inv_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+      inv_hom_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+    }
+  )
+  (by
+    intro X Y f
+    apply Subtype.ext
+    change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
+    simp
+  )
+
+lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
+  Functor.IsEquivalence (scalingHermitianCategories (C := C) R s lam) := by
+  constructor
+  sorry
