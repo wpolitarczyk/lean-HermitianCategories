@@ -498,6 +498,17 @@ def scalingParameter (s : Rˣ) : Z1Mul R :=
     change (s * star (s⁻¹)) * star (s * star (s⁻¹)) = 1
     simp [mul_comm, mul_left_comm, mul_assoc]⟩
 
+/- Scaling parameteres multiply.-/
+@[simp]
+lemma scalingParameter_mul (s t : Rˣ) :
+  scalingParameter R (s * t) = (scalingParameter R s) * (scalingParameter R t) := by
+  simp [scalingParameter]
+  ac_rfl
+
+@[simp]
+lemma scalingParameter_one : scalingParameter R 1 = 1 := by
+  simp [scalingParameter]
+
 /-- The identity functor with comparison components `s • 𝟙`.
 Transport uses the inverse comparison, so it scales forms by `s⁻¹`. -/
 def scalingFunctorCat (s : Rˣ) : DualityComparison (Functor.id C) where
@@ -610,5 +621,69 @@ def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
 
 lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
   Functor.IsEquivalence (scalingHermitianCategories (C := C) R s lam) := by
-  constructor
-  sorry
+  let sigma s := scalingParameter R s
+
+  have h_scalingParam : (sigma s⁻¹) * ((sigma s) * lam) = lam := by
+    unfold sigma
+    rw [← mul_assoc, ← scalingParameter_mul, inv_mul_cancel, scalingParameter_one, one_mul]
+
+  let F := scalingHermitianCategories (C := C) R s lam
+  let H := scalingHermitianCategories (C := C) R s⁻¹ (sigma s * lam)
+  let K := castHermitianHermitianCategories (C:= C) R h_scalingParam
+  let G := H ⋙ K
+
+  have h_eta : Functor.id (HermitianFormCat (C := C) R lam) ≅ F ⋙ G := by
+    -- The two scalings cancel on forms, so each component is the identity on X.M.
+    refine NatIso.ofComponents (fun X => {
+      hom := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
+            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
+      inv := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
+            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
+      hom_inv_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+      inv_hom_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+    }) ?_
+    intro X Y f
+    apply Subtype.ext
+    change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
+    simp
+
+  have h_eps : G ⋙ F ≅ Functor.id (HermitianFormCat (C := C) R (sigma s * lam)) := by
+    -- Cancellation in the other order gives the counit, again with identity components.
+    refine NatIso.ofComponents (fun X => {
+      hom := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
+            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
+      inv := ⟨𝟙 X.M, by
+        constructor
+        · exact IsIso.id (C := C) X.M
+        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
+            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
+      hom_inv_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+      inv_hom_id := by
+        apply Subtype.ext
+        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
+        simp
+    }) ?_
+    intro X Y f
+    apply Subtype.ext
+    change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
+    simp
+
+  exact Functor.IsEquivalence.mk' G h_eta h_eps
