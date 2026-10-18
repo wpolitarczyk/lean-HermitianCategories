@@ -7,6 +7,7 @@ Authors: Wojciech Politarczyk
 import Mathlib.Algebra.Star.SelfAdjoint
 import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Functor.Basic
+import Mathlib.CategoryTheory.Groupoid
 import Mathlib.CategoryTheory.Linear.Basic
 import Mathlib.CategoryTheory.NatIso
 import Mathlib.CategoryTheory.Opposites
@@ -276,6 +277,25 @@ def isIsometryLambdaHermitianForms {M N : C} (lam : Z1Mul R)
   IsIso f ∧
   f ≫ hN.val ≫ (HermitianCategory.duality.map f.op) = hM.val
 
+omit [StarLinearDuality R C] in
+lemma invIsIsometry {M N : C} (lam : Z1Mul R)
+    (hM : LambdaHermitianForm R M lam)
+    (hN : LambdaHermitianForm R N lam)
+    (f : M ⟶ N)
+    (hf : isIsometryLambdaHermitianForms R lam hM hN f) :
+    letI : IsIso f := hf.1
+    isIsometryLambdaHermitianForms R lam hN hM (inv f) := by
+  constructor
+  · infer_instance
+  · let : IsIso f := hf.1
+    let h_eq := hf.2
+    have h_left := whisker_eq (inv f) h_eq
+    rw [← Category.assoc (inv f) f, IsIso.inv_hom_id, Category.id_comp] at h_left
+    have h_right := eq_whisker h_left ((HermitianCategory.duality (C := C)).map (inv f).op)
+    rw [Category.assoc, op_inv, Functor.map_inv, Category.assoc, IsIso.hom_inv_id, Category.comp_id,
+      ← Functor.map_inv, ← op_inv] at h_right
+    exact h_right.symm
+
 /--
 The type of all isometries between two specific λ-Hermitian forms.
 For an element f of this subtype, `f.val` is the underlying morphism in C.
@@ -293,6 +313,15 @@ lemma idIsIsometry {M : C} (lam : Z1Mul R)
     constructor
     · infer_instance
     · simp
+
+noncomputable def inverseIsIsometry {M N : C} (lam : Z1Mul R)
+    (hM : LambdaHermitianForm R M lam)
+    (hN : LambdaHermitianForm R N lam)
+    (f : Isometry R lam hM hN) :
+    Isometry R lam hN hM := by
+  letI : IsIso f.val := f.property.1
+  exact ⟨inv f.val,
+    invIsIsometry R lam hM hN f.val f.property⟩
 
 /--
 A nonsingular λ-Hermitian object consists of a base object M, a λ-Hermitian form,
@@ -374,6 +403,25 @@ instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
 As an abbreviation, this reuses the category instance on `HermitianObject` directly. -/
 abbrev HermitianFormCat (lam : Z1Mul R) : Type _ :=
   HermitianObject (C := C) R lam
+
+instance (lam : Z1Mul R)
+    {X Y : (HermitianObject (C := C)) R lam} (f : X ⟶ Y) :
+    IsIso f := by
+  let : IsIso f.val := f.property.1
+  let g := inverseIsIsometry R lam X.form Y.form f
+  use g
+  constructor
+  · apply Subtype.ext
+    change f.val ≫ inv f.val = 𝟙 X.M
+    exact IsIso.hom_inv_id f.val
+  · apply Subtype.ext
+    change inv f.val ≫ f.val = 𝟙 Y.M
+    exact IsIso.inv_hom_id f.val
+
+noncomputable instance (lam : Z1Mul R) : Groupoid ((HermitianFormCat (C := C)) R lam) := by
+  apply Groupoid.ofIsIso
+  intro X Y f
+  infer_instance
 
 /-! ## Hermitian functors -/
 
