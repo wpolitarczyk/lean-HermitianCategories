@@ -10,29 +10,29 @@ The **abstract Hermitian-form framework is complete for this milestone**: it inc
 
 ## Overview
 
-A Hermitian category is a category $\mathcal{C}$ equipped with a contravariant duality functor $ D \colon \mathcal{C}^{\text{op}} \to \mathcal{C} $, a natural isomorphism $ \eta \colon \text{Id}_{\mathcal{C}} \cong D^2 $, and a coherence condition $ D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)} $.
+A Hermitian category is a category $`\mathcal{C}`$ equipped with a contravariant duality functor $`D \colon \mathcal{C}^{\text{op}} \to \mathcal{C}`$, a natural isomorphism $`\eta \colon \text{Id}_{\mathcal{C}} \cong D^2`$, and a coherence condition $`D(\eta_X) \circ \eta_{D(X)} = \text{id}_{D(X)}`$.
 
 The current formalization includes:
 
-- **Sesquilinear forms:** `Sesq M` is the morphism space $M \to D(M)$, with an abelian group structure when the category is preadditive.
-- **Adjoints and λ-Hermitian forms:** the adjoint operation `formDual` is involutive. For a norm-one unit $\lambda$, the condition is $h^\dagger = \lambda \cdot h$. Under the specified additivity and linearity assumptions, these forms constitute an additive subgroup; `StarLinearDuality` expresses conjugate-linearity of the duality.
+- **Sesquilinear forms:** `Sesq M` is the morphism space $`M \to D(M)`$, with an abelian group structure when the category is preadditive.
+- **Adjoints and λ-Hermitian forms:** the adjoint operation `formDual` is involutive. For a norm-one unit $`\lambda`$, the condition is $`h^\dagger = \lambda \cdot h`$. Under the specified additivity and linearity assumptions, these forms constitute an additive subgroup; `StarLinearDuality` expresses conjugate-linearity of the duality.
 - **Nonsingular objects and isometries:** `HermitianObject` packages a λ-Hermitian form whose underlying morphism is an isomorphism. `HermitianFormCat` names the resulting category, with invertible form-preserving morphisms as its isometries. Inverse isometries give this category a `Groupoid` instance.
 - **Comparisons of dualities:** `DualityComparison` supplies a natural comparison isomorphism; `DualityPreservingFunctor` additionally requires ordinary double-dual coherence. `mapSesqForms` needs only the comparison, and `mapSesqFormsHom` packages transport as an additive homomorphism when the functor is additive.
 - **Transport of Hermitian forms:** with the stated linearity assumptions and scalar-dependent compatibility `HermitianFunctor R functor hf eta`, `mapHermitianForms` sends λ-Hermitian forms to `(eta * lam)`-Hermitian forms. `mapHermitianFormsHom` gives the additive homomorphism, and `functorHermitianCategories` gives the induced functor on nonsingular Hermitian objects and isometries.
 - **Identity, composition, and equivalences:** transport respects identity and composition on forms, objects, and isometries; the induced functor laws hold after parameter casts. `functorHermitianCategoriesIsEquivalence` proves that a compatible linear equivalence induces an equivalence, bundled by `equivalenceHermitianCategories`.
 - **Scaling:** `scalingFunctorCat R s` equips the identity functor with comparison components `s • 𝟙`. Its induced `scalingHermitianCategories R s lam` scales forms by `s⁻¹`, changes their parameter to `(scalingParameter R s * lam)`, where `scalingParameter R s = s * star (s⁻¹)`, and leaves underlying isometry morphisms unchanged.
 - **Scaling composition and equivalence:** `scalingFunctorCompIso` identifies successive scalings by `s` and `t` with scaling by `t * s`, up to a natural isomorphism and the corresponding parameter cast. `scalingFunctorIsEquivalence` proves that every scaling functor is an equivalence; its inverse scales by `s⁻¹` and casts the resulting parameter back to `lam`.
-- **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $r + r^* = 1$ implies vanishing of both additive groups.
+- **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $`r + r^* = 1`$ implies vanishing of both additive groups.
 
-In particular, writing $\sigma(s) = s\,\overline{s^{-1}}$, the scaling theorem gives
+In particular, writing $`\sigma(s) = s\,\overline{s^{-1}}`$, the scaling theorem gives
 
 $$
-\operatorname{Herm}_{\lambda}(\mathcal C)
+\mathrm{Herm}_{\lambda}(\mathcal{C})
 \simeq
-\operatorname{Herm}_{\sigma(s)\lambda}(\mathcal C).
+\mathrm{Herm}_{\sigma(s)\lambda}(\mathcal{C}).
 $$
 
-Here $R$ is a commutative ring with involution, $s \in R^\times$, and $\lambda\overline{\lambda}=1$. The category $\mathcal C$ is $R$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The equivalence sends a form $h$ to $s^{-1}h$; its unit and counit have identity isometries as components.
+Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lambda\overline{\lambda}=1`$. The category $`\mathcal{C}`$ is $`R`$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The equivalence sends a form $`h`$ to $`s^{-1}h`$; its unit and counit have identity isometries as components.
 
 `HermitianFunctor` imposes scalar-dependent compatibility on a `DualityComparison`; ordinary coherence is not an additional prerequisite for this transport. To use an ordinary `DualityPreservingFunctor` with the transport constructions, pass its `.toDualityComparison` field.
 
@@ -60,13 +60,8 @@ when only the forms and their groupoid structure are needed.
 
 This milestone treats abstract categories with duality. The following extensions are **not yet implemented** and lie outside its scope:
 
-- **Finitely generated projective modules:** construct the Hermitian structure from $P \mapsto Hom_R(P,R)$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
-- **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $A \mapsto Hom(A,\mathbb{Q}/\mathbb{Z})$, and prove the double-dual isomorphism and coherence.
-- **Fix display errors in README file:** when I view the rendered README file on GitHug there are a couple of issues:
-    - operatorname doesn't display with error message: The following macros are not allowed: operatorname
-    - LaTeX is not rendered in the part: "A Hermitian category is a category C
-     equipped with a contravariant duality functor $ D \colon \mathcal{C}^{\text{op}} \to \mathcal{C} $, a natural isomorphism $ \eta \colon \text{Id}{\mathcal{C}} \cong D^2 $, and a coherence condition $ D(\eta_X) \circ \eta{D(X)} = \text{id}_{D(X)} $."
-
+- **Finitely generated projective modules:** construct the Hermitian structure from $`P \mapsto Hom_R(P,R)`$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
+- **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $`A \mapsto Hom(A,\mathbb{Q}/\mathbb{Z})`$, and prove the double-dual isomorphism and coherence.
 - **Quadratic forms:** extend the project with a formalization of quadratic forms in Hermitian categories.
 
 ## Development Environment
