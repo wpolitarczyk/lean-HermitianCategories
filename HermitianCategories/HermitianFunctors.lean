@@ -607,26 +607,10 @@ lemma functorHermitianCategories_essSurj (hf : DualityComparison functor)
         infer_instance
       exact isIso_of_reflects_iso h functor
     let X : HermitianObject (C := C) R lam := ⟨M, ⟨h, hh⟩, hn⟩
-    -- Lift e to an isomorphism of Hermitian objects, with inverse e.inv.
-    refine ⟨X, ⟨?_⟩⟩
-    refine {
-      hom := ⟨e.hom, by change IsIso e.hom; infer_instance, ?_⟩
-      inv := ⟨e.inv, by change IsIso e.inv; infer_instance, ?_⟩
-      hom_inv_id := ?_
-      inv_hom_id := ?_
-    }
-    · exact ht.symm
-    · change e.inv ≫ mapSesqForms functor hf h ≫ DD.map e.inv.op = Y.form.val
-      rw [ht]
-      dsimp [k]
-      simp only [Category.assoc, Iso.inv_hom_id_assoc]
-      rw [← DD.map_comp, ← op_comp]
-      rw [e.inv_hom_id, op_id, DD.map_id]
-      exact Category.comp_id Y.form.val
-    · apply Subtype.ext
-      exact e.hom_inv_id
-    · apply Subtype.ext
-      exact e.inv_hom_id
+    -- Every isometry is invertible, so only the forward morphism is needed.
+    let f : (functorHermitianCategories R functor hf lam eta hermf).obj X ⟶ Y :=
+      ⟨e.hom, by change IsIso e.hom; infer_instance, ht.symm⟩
+    exact ⟨X, ⟨asIso f⟩⟩
 
 omit [StarLinearDuality R C] [Functor.Additive functor] in
 /-- A linear equivalence equipped with a Hermitian comparison induces an
@@ -728,34 +712,18 @@ The cast identifies σ(t * s) * λ with σ(t) * (σ(s) * λ), so the functors ha
 the same target category. Both sides give the same underlying forms after
 simplifying scalar multiplication; the components are identity isometries.
 The result is a natural isomorphism (`≅`), rather than an equality of functors. -/
-def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
+noncomputable def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
   (scalingHermitianCategories (C := C) R s lam) ⋙ (scalingHermitianCategories (C := C) R t ((scalingParameter R s) * lam)) ≅
   (scalingHermitianCategories (C:= C) R (t * s) lam) ⋙ castHermitianHermitianCategories R (by rw [scalingParameter_mul, mul_assoc]) :=
   NatIso.ofComponents
-  (fun X =>
-    {
-      hom := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [scalingHermitianCategories, castHermitianHermitianCategories, functorHermitianCategories, mapHermitianObjects, mapHermitianForms]
-          simp [smul_smul, mul_comm]
-      ⟩
-      inv := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [scalingHermitianCategories, castHermitianHermitianCategories, functorHermitianCategories, mapHermitianObjects, mapHermitianForms]
-          simp [smul_smul, mul_comm]
-      ⟩
-      hom_inv_id := by
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-      inv_hom_id := by
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-    }
-  )
+  (fun X => by
+    -- The groupoid supplies the inverse and cancellation laws for this isometry.
+    refine asIso (show _ ⟶ _ from ⟨𝟙 X.M, ?_⟩)
+    constructor
+    · exact IsIso.id (C := C) X.M
+    · simp [scalingHermitianCategories, castHermitianHermitianCategories,
+        functorHermitianCategories, mapHermitianObjects, mapHermitianForms]
+      simp [smul_smul, mul_comm])
   (by
     intro X Y f
     -- Both functors preserve the underlying morphism f.val, so naturality is an identity law.
