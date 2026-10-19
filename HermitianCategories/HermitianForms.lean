@@ -283,6 +283,29 @@ lemma idIsIsometry {M : C} (lam : Z1Mul R)
     · infer_instance
     · simp
 
+omit [StarLinearDuality R C] in
+/-- Composing isometries preserves the form, including when the forms are singular. -/
+lemma compIsIsometry {M N P : C} (lam : Z1Mul R)
+    (hM : LambdaHermitianForm R M lam)
+    (hN : LambdaHermitianForm R N lam)
+    (hP : LambdaHermitianForm R P lam)
+    (f : M ⟶ N) (g : N ⟶ P)
+    (hf : isIsometryLambdaHermitianForms R lam hM hN f)
+    (hg : isIsometryLambdaHermitianForms R lam hN hP g) :
+    isIsometryLambdaHermitianForms R lam hM hP (f ≫ g) := by
+  let : IsIso f := hf.1
+  let : IsIso g := hg.1
+  refine ⟨inferInstance, ?_⟩
+  -- Dualizing a composite reverses its factors, so the two pullbacks compose.
+  rw [op_comp, Functor.map_comp]
+  calc
+    (f ≫ g) ≫ hP.val ≫ HermitianCategory.duality.map g.op ≫
+        HermitianCategory.duality.map f.op =
+        f ≫ (g ≫ hP.val ≫ HermitianCategory.duality.map g.op) ≫
+          HermitianCategory.duality.map f.op := by simp only [Category.assoc]
+    _ = f ≫ hN.val ≫ HermitianCategory.duality.map f.op := by rw [hg.2]
+    _ = hM.val := hf.2
+
 noncomputable def inverseIsIsometry {M N : C} (lam : Z1Mul R)
     (hM : LambdaHermitianForm R M lam)
     (hN : LambdaHermitianForm R N lam)
@@ -304,69 +327,14 @@ structure HermitianObject (lam : Z1Mul R) where
   /-- Invertibility of the underlying form morphism, imposed in addition to symmetry. -/
   nonsingular : isNonSingular form.val
 
-/--
-Define the Category instance.
-We tell Lean that the morphisms are our `Isometries`, and we provide the proofs
-that the identity morphism is an isometry, and that composing two isometries
-results in another isometry.
-
-The remaining category laws use Mathlib's default proof tactics: equality of these
-subtype morphisms reduces to equality of their underlying morphisms in C.
--/
+/-- The category of nonsingular λ-Hermitian objects with isometries as morphisms.
+Identity and composition use the corresponding isometry lemmas. The remaining
+category laws follow from equality of the underlying morphisms in C. -/
 instance (lam : Z1Mul R) : Category (HermitianObject (C := C) R lam) where
-  -- The hom-set between X and Y is the subtype of isometries
   Hom X Y := Isometry R lam X.form Y.form
-
-  -- Pair the underlying identity with the two proofs required of an isometry.
-  id X := ⟨𝟙 X.M, by
-    unfold isIsometryLambdaHermitianForms
-    let D := HermitianCategory.duality (C := C)
-    change IsIso (𝟙 X.M) ∧ 𝟙 X.M ≫ X.form ≫ D.map (𝟙 X.M).op = X.form
-    -- The identity is its own inverse. This explicit construction separates
-    -- the existential witness from the IsIso structure that contains it.
-    have h1 : IsIso ( 𝟙 X.M ) := by
-      have : ∃ g, 𝟙 X.M ≫ g = 𝟙 X.M ∧ g ≫ 𝟙 X.M = 𝟙 X.M := by
-        use 𝟙 X.M
-        -- `constructor` splits the conjunction; `<;>` applies the rewrite to both goals.
-        constructor <;> rw [Category.id_comp]
-      -- The anonymous `have` is named `this`; IsIso.mk packages it as the field `out`.
-      exact IsIso.mk this
-    -- Opposites and functors preserve identity arrows, so pulling back along
-    -- the identity leaves the form unchanged.
-    have h2 : 𝟙 X.M ≫ X.form ≫ D.map (𝟙 X.M).op = X.form := by
-      rw [Category.id_comp, op_id, D.map_id, Category.comp_id]
-    exact ⟨ h1, h2 ⟩
-    ⟩
-
-  -- Compose the underlying morphisms, then prove invertibility and form preservation.
-  comp {X Y Z} f g := ⟨f.val ≫ g.val, by
-    unfold isIsometryLambdaHermitianForms
-    let D := HermitianCategory.duality (C := C)
-    change IsIso (f.val ≫ g.val) ∧ (f.val ≫ g.val) ≫ Z.form ≫ D.map (f.val ≫ g.val).op = X.form
-    -- Subtype proofs are not automatically registered as typeclass instances.
-    -- These local instances make `inv` and its cancellation lemmas available.
-    let _ : IsIso f.val := f.property.1
-    let _ : IsIso g.val := g.property.1
-    have h1 : ∃ h, (f.val ≫ g.val) ≫ h = 𝟙 X.M ∧ h ≫ (f.val ≫ g.val) = 𝟙 Z.M := by
-      -- The inverse runs in the opposite order: Z.M ⟶ Y.M ⟶ X.M.
-      use (inv g.val) ≫ (inv f.val)
-      -- Associativity and inverse-cancellation simp lemmas prove both equations.
-      constructor <;> simp
-    have h2 : (f.val ≫ g.val) ≫ Z.form ≫ D.map (f.val ≫ g.val).op = X.form := by
-      have f_preserves_form : f.val ≫ Y.form ≫ D.map (f.val).op = X.form := f.property.2
-      have g_preserves_form : g.val ≫ Z.form ≫ D.map (g.val).op = Y.form := g.property.2
-      -- Dualizing a composite reverses its factors. This exposes a pullback
-      -- along g followed by a pullback along f.
-      rw [op_comp, D.map_comp]
-      calc
-        (f.val ≫ g.val) ≫ Z.form ≫ D.map (g.val).op ≫ D.map (f.val).op
-        -- Only the parentheses change here; the order of morphisms is preserved.
-        _ = f.val ≫ (g.val ≫ Z.form ≫ D.map (g.val).op) ≫ D.map (f.val).op := by simp only [Category.assoc]
-        _ = f.val ≫ Y.form ≫ D.map f.val.op := by rw [g_preserves_form]
-        _ = X.form := by rw [f_preserves_form]
-    -- h1 is an existential proof, so package it as IsIso before pairing it with h2.
-    exact ⟨IsIso.mk h1, h2⟩
-  ⟩
+  id X := ⟨𝟙 X.M, idIsIsometry R lam X.form⟩
+  comp {X Y Z} f g := ⟨f.val ≫ g.val,
+    compIsIsometry R lam X.form Y.form Z.form f.val g.val f.property g.property⟩
 
 /-- A name for the category of nonsingular λ-Hermitian objects and their isometries.
 As an abbreviation, this reuses the category instance on `HermitianObject` directly. -/
