@@ -81,12 +81,12 @@ lemma compHermitianFunctors {E : Type u} [Category E] [Preadditive E] [Linear R 
     (compDualityComparison F G hfDC hgDC)
     (eta1 * eta2) := by
     intro M
-    -- Expand the composite comparison into its two whiskered components.
-    dsimp [compDualityComparison, Trans.trans]
-    simp only [Category.id_comp, Category.comp_id]
+    -- Use the forward component formula for the composite comparison.
+    simp only [compDualityComparison_hom_app]
+    dsimp
     -- Apply compatibility for F and pull its parameter through G.
     rw [hf M, Functor.map_smul]
-    simp only [Functor.map_comp, Linear.comp_smul, Category.assoc]
+    simp only [Functor.map_comp, Linear.comp_smul]
     -- Naturality moves the dual of F's comparison past G's comparison.
     -- The postcomposition in `naturality_assoc` retains the double-dual inverse
     -- and the image of the source double-dual map already present in the goal.
@@ -106,15 +106,6 @@ Its comparison components are identities, and the double-dual inverse and forwar
 maps cancel. Neither additivity nor conjugate-linearity of the duality is needed. -/
 lemma IdIsHermitianFunctor : HermitianFunctor R (Functor.id C) IdIsDualityComparison (1 : Z1Mul R) := by
   intro M
-  -- Expand the comparison, including the isomorphism compositions in its `calc` block.
-  dsimp [IdIsDualityComparison, Trans.trans]
-  -- Remove the unit scalar, cancel the double-dual maps, and evaluate the
-  -- components of identity natural transformations as identity morphisms.
-  simp only [Category.comp_id, Category.id_comp, Functor.opId, Iso.refl, one_smul,
-    Iso.inv_hom_id_app, NatTrans.id_app]
-  -- Reduce object expressions involving the opposite identity functor before
-  -- simplifying the duality's images of identity morphisms.
-  dsimp
   simp
 
 /-- Regard a Hermitian object with parameter `lam1` as one with the equal parameter `lam2`.
@@ -246,12 +237,8 @@ lemma mapHermitianFormsComp {E : Type u} {M : C} [Category.{v} E] [Preadditive E
   (h : LambdaHermitianForm R M lam) :
   (mapHermitianForms R (F ⋙ G) (compDualityComparison F G hf hg) lam (etaF * etaG) (compHermitianFunctors R F G hf hg etaF etaG hermf hermg) h).val =
   (mapHermitianForms R G hg (etaF * lam) etaG hermg (mapHermitianForms R F hf lam (etaF) hermf h)).val := by
-    -- Only the underlying sesquilinear transport remains after taking `.val`.
-    -- The inverse composite comparison applies G to F's inverse comparison,
-    -- then follows it by G's inverse comparison.
-    dsimp [mapHermitianForms, mapSesqForms, compDualityComparison, Trans.trans]
-    -- Expand G's map of the first transport and reassociate the resulting arrows.
-    simp [Functor.map_comp, Category.assoc]
+    -- The inverse component formula reduces this to functoriality and associativity.
+    simp [mapHermitianForms, mapSesqForms, Functor.map_comp, Category.assoc]
 
 omit [StarLinearDuality R C] in
 /-- Transport along the canonical identity comparison leaves the underlying
@@ -261,10 +248,7 @@ lemma mapHermitianFormsId {M : C}
   (hf : LambdaHermitianForm R M lam) :
   (mapHermitianForms R (Functor.id C) IdIsDualityComparison lam 1 (IdIsHermitianFunctor R) hf).val =
     hf.val := by
-    -- Identity transport maps the form by Id and postcomposes with the inverse
-    -- identity comparison; unfolding exposes only identity maps and unitors.
-    dsimp [mapHermitianForms, mapSesqForms, IdIsDualityComparison, Trans.trans]
-    simp
+    simp [mapHermitianForms, mapSesqForms]
 
 /-- Transport of Hermitian forms bundled as an additive homomorphism.
 After `Subtype.ext` removes the symmetry proof fields, the additive laws are
@@ -435,8 +419,7 @@ lemma functorHermitianCategoriesComp {E : Type u} [Category.{v} E] [Preadditive 
       intro k
       dsimp [functorHermitianCategories, castHermitianHermitianCategories,
         mapHermitianObjects, isIsometryLambdaHermitianForms]
-      simp [mapHermitianForms, mapSesqForms, compDualityComparison,
-        Trans.trans, Functor.map_comp, Category.assoc])).mpr
+      simp [mapHermitianForms, mapSesqForms, Functor.map_comp, Category.assoc])).mpr
     rfl
 
 omit [StarLinearDuality R C] in
@@ -457,8 +440,7 @@ lemma functorHermitianCategoriesId (lam : Z1Mul R) :
       intro k
       dsimp [functorHermitianCategories, castHermitianHermitianCategories,
         mapHermitianObjects, isIsometryLambdaHermitianForms]
-      simp [mapHermitianForms, mapSesqForms,
-        IdIsDualityComparison, Trans.trans, Category.assoc])).mpr
+      simp [mapHermitianForms, mapSesqForms])).mpr
     rfl
 
 /-! ## Equivalences induced by Hermitian functors -/

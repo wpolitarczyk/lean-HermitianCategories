@@ -144,6 +144,24 @@ def compDualityComparison {E : Type u} [Category.{v} E] [HermitianCategory E]
       _ ≅ (DC ⋙ F) ⋙ G := by apply Functor.isoWhiskerRight hf.nat_iso G
       _ ≅ DC ⋙ (F ⋙ G) := by apply Functor.associator
 
+/-- The forward composite comparison first uses G's comparison, then the image of F's. -/
+@[simp]
+lemma compDualityComparison_hom_app {E : Type u} [Category.{v} E] [HermitianCategory E]
+    (F : C ⥤ D) (G : D ⥤ E) (hf : DualityComparison F) (hg : DualityComparison G)
+    (X : Cᵒᵖ) :
+    (compDualityComparison F G hf hg).nat_iso.hom.app X =
+      hg.nat_iso.hom.app (F.op.obj X) ≫ G.map (hf.nat_iso.hom.app X) := by
+  simp [compDualityComparison, Trans.trans]
+
+/-- The inverse composite comparison applies the inverse components in reverse order. -/
+@[simp]
+lemma compDualityComparison_inv_app {E : Type u} [Category.{v} E] [HermitianCategory E]
+    (F : C ⥤ D) (G : D ⥤ E) (hf : DualityComparison F) (hg : DualityComparison G)
+    (X : Cᵒᵖ) :
+    (compDualityComparison F G hf hg).nat_iso.inv.app X =
+      G.map (hf.nat_iso.inv.app X) ≫ hg.nat_iso.inv.app (F.op.obj X) := by
+  simp [compDualityComparison, Trans.trans]
+
 /-- The identity functor carries a canonical comparison of dualities.
 Identify its opposite with the identity on Cᵒᵖ, then use the unitors to compare
 `Id ⋙ D` with `D ⋙ Id`. Both comparison components are identity morphisms. -/
@@ -158,6 +176,20 @@ def IdIsDualityComparison : DualityComparison (Functor.id C) := by
     _ ≅ DC                      := by apply Functor.leftUnitor DC
     _ ≅ DC ⋙ (Functor.id C)    := by apply Functor.rightUnitor DC
 
+/-- The forward component of the identity comparison is an identity morphism. -/
+@[simp]
+lemma IdIsDualityComparison_hom_app (X : Cᵒᵖ) :
+    (IdIsDualityComparison (C := C)).nat_iso.hom.app X =
+      𝟙 (HermitianCategory.duality.obj X) := by
+  simp [IdIsDualityComparison, Trans.trans]
+
+/-- The inverse component of the identity comparison is an identity morphism. -/
+@[simp]
+lemma IdIsDualityComparison_inv_app (X : Cᵒᵖ) :
+    (IdIsDualityComparison (C := C)).nat_iso.inv.app X =
+      𝟙 (HermitianCategory.duality.obj X) := by
+  simp [IdIsDualityComparison, Trans.trans]
+
 /-- Compose duality-preserving functors using `compDualityComparison`.
 The composite satisfies ordinary double-dual coherence: expand coherence for F
 and G, then use naturality of G's comparison at the opposite of F's inverse
@@ -169,17 +201,16 @@ def compDualityPreservingFunctor {E : Type u} [Category.{v} E] [HermitianCategor
   (hg : DualityPreservingFunctor G) :
   (DualityPreservingFunctor (F ⋙ G)) := by
     -- Retain the comparison data; the remaining field is its coherence proof.
-    -- A local `let` allows the comparison to be unfolded below.
     let hDC : DualityComparison (F ⋙ G) := compDualityComparison F G hf.toDualityComparison hg.toDualityComparison
 
     refine { toDualityComparison := hDC, coherence := ?_ }
     intro X
-    -- Expand the composite comparison, including the transitivity steps in `calc`.
-    dsimp [hDC, compDualityComparison, Trans.trans]
-    simp only [Category.id_comp, Category.comp_id]
+    -- Use the component formulas without unfolding the whiskering construction.
+    simp only [hDC, compDualityComparison_hom_app, compDualityComparison_inv_app,
+      Functor.comp_map, Functor.comp_obj, Functor.op_obj, op_comp, Functor.map_comp]
     -- Apply coherence first for F, then for G.
     rw [hf.coherence, G.map_comp, G.map_comp, hg.coherence]
-    simp only [Functor.map_comp, Category.assoc]
+    simp only [Category.assoc]
     -- Move the dual of F's inverse comparison past G's comparison.
     -- `naturality_assoc` includes the final postcomposition by G's image of
     -- F's comparison at D_C(X), matching the right-associated goal.
@@ -199,14 +230,7 @@ def IdIsDualityPreservingFunctor : DualityPreservingFunctor (Functor.id C) := by
 
   refine { toDualityComparison := idDC, coherence := ?_ }
   intro X
-  -- Unfold the comparison and the isomorphism compositions from its `calc` block.
-  dsimp [idDC, IdIsDualityComparison, Trans.trans]
-  -- The forward and inverse components of `opId` are identities.
-  simp only [Functor.opId_hom_app, Functor.opId_inv_app]
-  -- Specialize `map_id` to the duality so simplification matches its map expressions.
-  -- Opposites of identities and composition with identities then simplify away.
-  simp only [(HermitianCategory.duality (C := C)).map_id,
-    op_id, Category.comp_id]
+  simp [idDC]
 
 /-! ## Transport of sesquilinear forms along comparisons of dualities -/
 
