@@ -21,8 +21,9 @@ for the order-two action given by `star`. For the additive group of R:
 
 The multiplicative constructions use the abelian unit group Rˣ instead of R:
 sums become products, differences become y * (star y)⁻¹, and zero becomes one.
-Each construction first packages cycles and boundaries as subgroups, proves B ≤ Z,
-then forms the quotient Z/B. These are direct presentations; no comparison with
+Cycles are kernels and boundaries are ranges of the trace/norm and difference
+homomorphisms. Membership lemmas recover the explicit predicates. Each construction
+proves B ≤ Z, then forms the quotient Z/B. These are direct presentations; no comparison with
 Mathlib's general Tate-cohomology functor is constructed here.
 
 The two additive vanishing results use a generalized half-unit r with r + star r = 1.
@@ -38,24 +39,32 @@ variable (R : Type u) [CommRing R] [StarRing R]
 
 /-! ## Additive Tate cohomology groups -/
 
+/-- The additive trace map associated with the involution. -/
+def tateTraceHom : R →+ R where
+  toFun x := x + star x
+  map_zero' := by simp
+  map_add' x y := by simp only [star_add]; ac_rfl
+
+/-- The additive difference map associated with the involution. -/
+def tateDifferenceHom : R →+ R where
+  toFun x := x - star x
+  map_zero' := by simp
+  map_add' x y := by rw [star_add, sub_add_sub_comm]
+
+@[simp] lemma tateTraceHom_apply (x : R) : tateTraceHom R x = x + star x := rfl
+@[simp] lemma tateDifferenceHom_apply (x : R) : tateDifferenceHom R x = x - star x := rfl
+
 /--
 The degree-zero cycle condition: x is fixed by the involution.
 -/
 def isZeroCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x = star x
 
-/-- Fixed elements form an additive subgroup; the fields below prove closure. -/
-def Z0Add : AddSubgroup R where
-  carrier := { x | isZeroCycleAdd x }
-  zero_mem' := by simp [isZeroCycleAdd]
-  add_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isZeroCycleAdd] at *
-    rw [star_add, ← ha, ← hb]
-  neg_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isZeroCycleAdd] at *
-    rw [star_neg, ← hx]
+/-- Fixed elements are the kernel of the difference map. -/
+def Z0Add : AddSubgroup R := (tateDifferenceHom R).ker
+
+@[simp] lemma mem_Z0Add (x : R) : x ∈ Z0Add R ↔ isZeroCycleAdd x := by
+  simp [Z0Add, isZeroCycleAdd, sub_eq_zero]
 
 /--
 The degree-zero boundary condition: x is the trace y + star y of some ring element y.
@@ -63,35 +72,19 @@ The degree-zero boundary condition: x is the trace y + star y of some ring eleme
 def isZeroNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y + star y
 
-/-- The trace subgroup. Closure is proved by adding or negating the trace witnesses. -/
-def B0Add : AddSubgroup R where
-  carrier := { x | isZeroNormAdd x }
-  zero_mem' := by
-    simp only [isZeroNormAdd]
-    use 0
-    rw [star_zero, add_zero]
-  add_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isZeroNormAdd] at *
-    -- Extract the trace witnesses and substitute their expressions for a and b.
-    rcases ha with ⟨ya, rfl⟩
-    rcases hb with ⟨yb, rfl⟩
-    use (ya + yb)
-    rw [star_add]
-    -- `ac_rfl` rearranges terms using associativity and commutativity.
-    ac_rfl
-  neg_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isZeroNormAdd] at *
-    rcases hx with ⟨y, rfl⟩
-    use -y
-    rw [star_neg, neg_add]
+/-- Additive degree-zero boundaries are the range of the trace map. -/
+def B0Add : AddSubgroup R := (tateTraceHom R).range
+
+@[simp] lemma mem_B0Add (x : R) : x ∈ B0Add R ↔ isZeroNormAdd x := by
+  simp [B0Add, AddMonoidHom.mem_range, isZeroNormAdd, eq_comm]
 
 /--
 B⁰(R) is an additive subgroup of Z⁰(R).
 -/
 lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by
   intro x hx
+  rw [mem_B0Add] at hx
+  rw [mem_Z0Add]
   rcases hx with ⟨y, rfl⟩
 
   -- Unfold the subgroup membership into the `isZeroCycleAdd` equation
@@ -123,24 +116,11 @@ The degree-one cycle condition: x + star x = 0, equivalently star x = -x.
 def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x + star x = 0
 
-/-- The kernel of the additive trace map: elements with x + star x = 0. -/
-def Z1Add : AddSubgroup R where
-  carrier := { x | isOneCycleAdd x }
-  zero_mem' := by
-    simp [isOneCycleAdd]
-  add_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneCycleAdd] at *
-    rw [star_add]
-    -- Group the terms to expose (a + star a) and (b + star b)
-    calc a + b + (star a + star b)
-      _ = (a + star a) + (b + star b) := by ac_rfl
-      _ = 0 + 0 := by rw [ha, hb]
-      _ = 0 := by rw [add_zero]
-  neg_mem' := by
-    intro a ha
-    simp only [Set.mem_ofPred_eq, isOneCycleAdd] at *
-    rw [star_neg, ← neg_add, ha, neg_zero]
+/-- Additive degree-one cycles are the kernel of the trace map. -/
+def Z1Add : AddSubgroup R := (tateTraceHom R).ker
+
+@[simp] lemma mem_Z1Add (x : R) : x ∈ Z1Add R ↔ isOneCycleAdd x := by
+  rfl
 
 /--
 The degree-one boundary condition: x is a difference y - star y.
@@ -148,44 +128,19 @@ The degree-one boundary condition: x is a difference y - star y.
 def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y - star y
 
-/-- The image of the difference map y ↦ y - star y, as an additive subgroup. -/
-def B1Add : AddSubgroup R where
-  carrier := { x | isOneNormAdd x }
-  zero_mem' := by
-    simp only [Set.mem_ofPred_eq, isOneNormAdd]
-    -- 0 = 0 - 0*
-    use 0
-    rw [star_zero, sub_zero]
-  add_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneNormAdd] at *
-    rcases ha with ⟨ya, rfl⟩
-    rcases hb with ⟨yb, rfl⟩
-    use ya + yb
+/-- Additive degree-one boundaries are the range of the difference map. -/
+def B1Add : AddSubgroup R := (tateDifferenceHom R).range
 
-    -- `sub_add_sub_comm` is the exact Mathlib lemma for (a - b) + (c - d) = (a + c) - (b + d)
-    calc ya - star ya + (yb - star yb)
-      _ = (ya + yb) - (star ya + star yb) := by rw [sub_add_sub_comm]
-      _ = (ya + yb) - star (ya + yb) := by rw [← star_add]
-  neg_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isOneNormAdd] at *
-    rcases hx with ⟨y, rfl⟩
-    use -y
-
-    -- We can carefully step through the negative distribution
-    calc -(y - star y)
-      _ = star y - y := by rw [neg_sub]
-      _ = star y + -y := by rw [sub_eq_add_neg]
-      _ = -y + star y := by rw [add_comm]
-      _ = -y - -star y := by rw [← sub_neg_eq_add]
-      _ = -y - star (-y) := by rw [← star_neg]
+@[simp] lemma mem_B1Add (x : R) : x ∈ B1Add R ↔ isOneNormAdd x := by
+  simp [B1Add, AddMonoidHom.mem_range, isOneNormAdd, eq_comm]
 
 /--
 B¹(R) is an additive subgroup of Z¹(R).
 -/
 lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by
   intro x hx
+  rw [mem_B1Add] at hx
+  rw [mem_Z1Add]
   rcases hx with ⟨y, rfl⟩
   change (y - star y) + star (y - star y) = 0
 
@@ -247,14 +202,16 @@ lemma TateCohomologyZeroAddVanishes
     rw [QuotientAddGroup.eq_zero_iff]
 
     -- This brings us to the core mathematical goal, i.e. to show that a is a norm.
-    -- Tell Lean to treat `a` as a raw ring element and unfold the B0Add definition.
+    -- Use the boundary membership lemma to expose a trace witness.
+    change (a : R) ∈ B0Add R
+    rw [mem_B0Add]
     change ∃ y : R, (a : R) = y + star y
 
     -- For a fixed element a, the trace of a*r is a*(r + star r) = a.
     use (a : R) * r
 
     -- Extract the proof that `a = a*` from the package `a`
-    have ha : (a : R) = star (a : R) := a.property
+    have ha : (a : R) = star (a : R) := (mem_Z0Add R a).mp a.property
 
     calc (a : R)
     _ = (a : R) * (1 : R) := by rw [mul_one]
@@ -288,20 +245,23 @@ lemma TateCohomologyOneAddVanishes
     -- The Mathlib lemma for ⟦a⟧ = 0 is QuotientAddGroup.eq_zero_iff
     rw [QuotientAddGroup.eq_zero_iff]
 
-    -- Unfold the B1Add membership condition, viewing the cycle a as a ring element.
+    -- Use the boundary membership lemma to expose a difference witness.
+    change (a : R) ∈ B1Add R
+    rw [mem_B1Add]
     change ∃ y : R, (a : R) = y - star y
 
     -- For star a = -a, the difference a*r - star (a*r) equals a*(r + star r) = a.
     use (a : R) * r
 
-    -- Extract the proof that `star a = -a` using a robust calc block
+    -- Recover the cycle equation through the membership API.
+    have hcycle : (a : R) + star (a : R) = 0 := (mem_Z1Add R a).mp a.property
     have ha : star (a : R) = - (a : R) := by
       calc star (a : R)
         _ = star (a : R) + 0 := by rw [add_zero]
         _ = star (a : R) + ((a : R) + - (a : R)) := by rw [← add_neg_cancel (a : R)]
         _ = (star (a : R) + (a : R)) + - (a : R) := by rw [← add_assoc]
         _ = ((a : R) + star (a : R)) + - (a : R) := by rw [add_comm (star (a : R))]
-        _ = 0 + - (a : R) := by rw [a.property]
+        _ = 0 + - (a : R) := by rw [hcycle]
         _ = - (a : R) := by rw [zero_add]
 
     -- Our goal right now is: (a : R) = (a : R) * r - star ((a : R) * r)
@@ -333,54 +293,49 @@ Commutativity of R makes Rˣ abelian; in particular the boundary subgroups are n
 as required by the quotient group construction.
 -/
 
+/-- The multiplicative norm homomorphism on units. -/
+def tateNormHom : Rˣ →* Rˣ where
+  toFun x := x * star x
+  map_one' := by simp
+  map_mul' x y := by simp only [star_mul]; ac_rfl
+
+/-- The multiplicative difference homomorphism on units. -/
+def tateDifferenceMulHom : Rˣ →* Rˣ where
+  toFun x := x * (star x)⁻¹
+  map_one' := by simp
+  map_mul' x y := by simp only [star_mul, mul_inv]; ac_rfl
+
+@[simp] lemma tateNormHom_apply (x : Rˣ) : tateNormHom R x = x * star x := rfl
+@[simp] lemma tateDifferenceMulHom_apply (x : Rˣ) :
+    tateDifferenceMulHom R x = x * (star x)⁻¹ := rfl
+
 /--
 The degree-zero multiplicative cycle condition: a unit is fixed by star.
 -/
 def isZeroCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x = star x
 
-/-- The subgroup of units fixed by the involution. -/
-def Z0Mul : Subgroup Rˣ where
-  carrier := { x | isZeroCycleMul x }
-  one_mem' := by simp [isZeroCycleMul]
-  mul_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isZeroCycleMul] at *
-    rw [star_mul, ← ha, ← hb, mul_comm]
-  inv_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isZeroCycleMul] at *
-    rw [star_inv, ← hx]
+/-- Fixed units are the kernel of the multiplicative difference map. -/
+def Z0Mul : Subgroup Rˣ := (tateDifferenceMulHom R).ker
+
+@[simp] lemma mem_Z0Mul (x : Rˣ) : x ∈ Z0Mul R ↔ isZeroCycleMul x := by
+  simp [Z0Mul, isZeroCycleMul, mul_inv_eq_one]
 
 /-- A multiplicative norm is a product y * star y with y a unit, not an arbitrary ring element. -/
 def isZeroNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * star y
 
-/-- The image of the norm map on units y ↦ y * star y. -/
-def B0Mul : Subgroup Rˣ where
-  carrier := { x | isZeroNormMul x }
-  one_mem' := by
-    rw [Set.mem_ofPred_eq]
-    use 1
-    rw [star_one, mul_one]
-  mul_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq] at *
-    rcases ha with ⟨ya, hya⟩
-    rcases hb with ⟨yb, hyb⟩
-    use ya * yb
-    rw [hya, hyb, star_mul]
-    ac_rfl
-  inv_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq] at *
-    rcases hx with ⟨z, hz⟩
-    use z⁻¹
-    rw [hz, mul_inv, star_inv]
+/-- Multiplicative degree-zero boundaries are the range of the norm map on units. -/
+def B0Mul : Subgroup Rˣ := (tateNormHom R).range
+
+@[simp] lemma mem_B0Mul (x : Rˣ) : x ∈ B0Mul R ↔ isZeroNormMul x := by
+  simp [B0Mul, MonoidHom.mem_range, isZeroNormMul, eq_comm]
 
 /-- Multiplicative norms are fixed by star, so they represent degree-zero boundaries. -/
 lemma B0Mul_le_Z0Mul : B0Mul R ≤ Z0Mul R := by
   intro x hx
+  rw [mem_B0Mul] at hx
+  rw [mem_Z0Mul]
   rcases hx with ⟨y, rfl⟩
   change y * star y = star (y * star y)
   rw [star_mul, star_star]
@@ -408,23 +363,11 @@ The degree-one multiplicative cycle condition: a unit has norm one.
 def isOneCycleMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   x * star x = 1
 
-/-- Norm-one units. `HermitianForms` uses elements of this subgroup as λ-Hermitian parameters. -/
-def Z1Mul : Subgroup Rˣ where
-  carrier := { x | isOneCycleMul x }
-  one_mem' := by simp [isOneCycleMul]
-  mul_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneCycleMul] at *
-    rw [star_mul]
-    calc a * b * (star b * star a)
-    _ = (a * star a) * (b * star b) := by ac_rfl
-    _ = 1 * 1 := by rw [ha, hb]
-    _ = 1 := by rw [mul_one]
+/-- Norm-one units form the kernel of the norm map and supply Hermitian parameters. -/
+def Z1Mul : Subgroup Rˣ := (tateNormHom R).ker
 
-  inv_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isOneCycleMul] at *
-    rw [star_inv, ← mul_inv, hx, inv_one]
+@[simp] lemma mem_Z1Mul (x : Rˣ) : x ∈ Z1Mul R ↔ isOneCycleMul x := by
+  rfl
 
 /--
 The degree-one multiplicative boundary condition: a unit has the form y * (star y)⁻¹.
@@ -433,27 +376,11 @@ The degree-one multiplicative boundary condition: a unit has the form y * (star 
 def isOneNormMul {R : Type u} [CommRing R] [StarRing R] (x : Rˣ) : Prop :=
   ∃ y : Rˣ, x = y * (star y)⁻¹
 
-/-- Multiplicative degree-one boundaries, with witnesses in the unit group. -/
-def B1Mul : Subgroup Rˣ where
-  carrier := { x | isOneNormMul x}
-  one_mem' := by
-    simp only [Set.mem_ofPred_eq, isOneNormMul]
-    use 1
-    rw [star_one, inv_one, mul_one]
-  mul_mem' := by
-    intro a b ha hb
-    simp only [Set.mem_ofPred_eq, isOneNormMul] at *
-    rcases ha with ⟨ya, rfl⟩
-    rcases hb with ⟨yb, rfl⟩
-    use ya * yb
-    rw [star_mul, mul_inv]
-    ac_rfl
-  inv_mem' := by
-    intro x hx
-    simp only [Set.mem_ofPred_eq, isOneNormMul] at *
-    rcases hx with ⟨y, rfl⟩
-    use y⁻¹
-    rw [mul_inv, inv_inv, star_inv, inv_inv]
+/-- Multiplicative degree-one boundaries are the range of the difference map on units. -/
+def B1Mul : Subgroup Rˣ := (tateDifferenceMulHom R).range
+
+@[simp] lemma mem_B1Mul (x : Rˣ) : x ∈ B1Mul R ↔ isOneNormMul x := by
+  simp [B1Mul, MonoidHom.mem_range, isOneNormMul, eq_comm]
 
 /--
 Here we establish that B¹(R) is a subgroup of Z¹(R).
@@ -461,6 +388,8 @@ Here we establish that B¹(R) is a subgroup of Z¹(R).
 
 lemma B1Mul_le_Z1Mul : B1Mul R ≤ Z1Mul R := by
   intro x hx
+  rw [mem_B1Mul] at hx
+  rw [mem_Z1Mul]
   rcases hx with ⟨y, rfl⟩
   change y * (star y)⁻¹ * star (y * (star y)⁻¹) = 1
   rw [star_mul, star_inv, star_star]
