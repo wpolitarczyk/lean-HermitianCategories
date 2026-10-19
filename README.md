@@ -21,7 +21,7 @@ The current formalization includes:
 - **Transport of Hermitian forms:** with the stated linearity assumptions and scalar-dependent compatibility `HermitianFunctor R functor hf eta`, `mapHermitianForms` sends λ-Hermitian forms to `(eta * lam)`-Hermitian forms. `mapHermitianFormsHom` gives the additive homomorphism, and `functorHermitianCategories` gives the induced functor on nonsingular Hermitian objects and isometries.
 - **Identity, composition, and equivalences:** transport respects identity and composition on forms, objects, and isometries; the induced functor laws hold after parameter casts. `functorHermitianCategoriesIsEquivalence` proves that a compatible linear equivalence induces an equivalence, bundled by `equivalenceHermitianCategories`.
 - **Scaling:** `scalingFunctorCat R s` equips the identity functor with comparison components `s • 𝟙`. Its induced `scalingHermitianCategories R s lam` scales forms by `s⁻¹`, changes their parameter to `(scalingParameter R s * lam)`, where `scalingParameter R s = s * star (s⁻¹)`, and leaves underlying isometry morphisms unchanged.
-- **Scaling composition and equivalence:** `scalingFunctorCompIso` identifies successive scalings by `s` and `t` with scaling by `t * s`, up to a natural isomorphism and the corresponding parameter cast. `scalingFunctorIsEquivalence` proves that every scaling functor is an equivalence; its inverse scales by `s⁻¹` and casts the resulting parameter back to `lam`.
+- **Scaling composition and equivalence:** `scalingFunctorCompIso` identifies successive scalings by `s` and `t` with scaling by `t * s`, up to a natural isomorphism and the corresponding parameter cast. `scalingFunctorIsEquivalence` proves that every scaling functor is an equivalence; the proof specializes the general transport equivalence theorem to the identity functor with the scaling comparison.
 - **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $`r + r^* = 1`$ implies vanishing of both additive groups.
 
 In particular, writing $`\sigma(s) = s\,\overline{s^{-1}}`$, the scaling theorem gives
@@ -32,7 +32,7 @@ $$
 \mathrm{Herm}_{\sigma(s)\lambda}(\mathcal{C}).
 $$
 
-Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lambda\overline{\lambda}=1`$. The category $`\mathcal{C}`$ is $`R`$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The equivalence sends a form $`h`$ to $`s^{-1}h`$; its unit and counit have identity isometries as components.
+Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lambda\overline{\lambda}=1`$. The category $`\mathcal{C}`$ is $`R`$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The scaling functor sends a form $`h`$ to $`s^{-1}h`$. Scaling by the inverse unit, followed by the appropriate parameter cast, reverses this operation.
 
 `HermitianFunctor` imposes scalar-dependent compatibility on a `DualityComparison`; ordinary coherence is not an additional prerequisite for this transport. To use an ordinary `DualityPreservingFunctor` with the transport constructions, pass its `.toDualityComparison` field.
 
@@ -91,3 +91,11 @@ lake build
 The checked-in `lake-manifest.json` records dependency revisions. Use `lake update` when intentionally refreshing dependency resolution.
 
 The default build target imports all project modules through `HermitianCategories.lean`. GitHub Actions builds the project on pushes, pull requests, and manual runs. After a successful build on a push to `master`, a separate job generates the API documentation and publishes it to GitHub Pages. Documentation deployments run one at a time.
+
+## Releases and License
+
+The current package version is **0.2.0**. See [CHANGELOG.md](CHANGELOG.md) for
+release notes and migration details.
+
+Copyright (c) 2026 Wojciech Politarczyk. Released under the
+[Apache License 2.0](LICENSE).
