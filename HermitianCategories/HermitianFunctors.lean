@@ -765,83 +765,10 @@ def scalingFunctorCompIso (s t : Rˣ) (lam : Z1Mul R) :
   )
 
 /-- Scaling by a unit gives an equivalence between the corresponding Hermitian categories.
-The inverse uses the unit s⁻¹ and casts its resulting parameter back to λ.
-The unit and counit are constructed directly from identity isometries. -/
+This specializes the general transport theorem to the identity functor equipped
+with the scaling comparison. -/
 lemma scalingFunctorIsEquivalence (s : Rˣ) (lam : Z1Mul R) :
   Functor.IsEquivalence (scalingHermitianCategories (C := C) R s lam) := by
-  let sigma s := scalingParameter R s
-
-  -- Multiplicativity of σ cancels the two parameter changes. The parentheses
-  -- match the target parameter produced by the inverse scaling functor H below.
-  have h_scalingParam : (sigma s⁻¹) * ((sigma s) * lam) = lam := by
-    unfold sigma
-    rw [← mul_assoc, ← scalingParameter_mul, inv_mul_cancel, scalingParameter_one, one_mul]
-
-  let F := scalingHermitianCategories (C := C) R s lam
-  -- H multiplies forms by s, undoing F's multiplication by s⁻¹.
-  let H := scalingHermitianCategories (C := C) R s⁻¹ (sigma s * lam)
-  -- K corrects the target parameter without changing the underlying forms or arrows.
-  let K := castHermitianHermitianCategories (C:= C) R h_scalingParam
-  let G := H ⋙ K
-
-  -- The unit has source Id and target F ⋙ G, the orientation required by `mk'`.
-  have h_eta : Functor.id (HermitianFormCat (C := C) R lam) ≅ F ⋙ G := by
-    -- The two scalings cancel on forms, so each component is the identity on X.M.
-    refine NatIso.ofComponents (fun X => {
-      hom := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
-            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
-      inv := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
-            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
-      hom_inv_id := by
-        -- Equality of bundled isometries reduces to equality of their underlying arrows.
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-      inv_hom_id := by
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-    }) ?_
-    -- F and G act identically on underlying arrows, so identity components are natural.
-    intro X Y f
-    apply Subtype.ext
-    change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
-    simp
-
-  -- The counit lives in the target category, with parameter σ(s) * λ.
-  have h_eps : G ⋙ F ≅ Functor.id (HermitianFormCat (C := C) R (sigma s * lam)) := by
-    -- Cancellation in the other order gives the counit, again with identity components.
-    refine NatIso.ofComponents (fun X => {
-      hom := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
-            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
-      inv := ⟨𝟙 X.M, by
-        constructor
-        · exact IsIso.id (C := C) X.M
-        · simp [F, G, H, K, scalingHermitianCategories, castHermitianHermitianCategories,
-            functorHermitianCategories, mapHermitianObjects, mapHermitianForms, smul_smul]⟩
-      hom_inv_id := by
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-      inv_hom_id := by
-        apply Subtype.ext
-        change 𝟙 X.M ≫ 𝟙 X.M = 𝟙 X.M
-        simp
-    }) ?_
-    intro X Y f
-    apply Subtype.ext
-    change f.val ≫ 𝟙 Y.M = 𝟙 X.M ≫ f.val
-    simp
-
-  -- `mk'` derives full faithfulness and essential surjectivity from this inverse data;
-  -- it does not require us to supply a separate triangle-identity proof.
-  exact Functor.IsEquivalence.mk' G h_eta h_eps
+  exact functorHermitianCategoriesIsEquivalence R (Functor.id C)
+    (scalingFunctorCat R s) lam (scalingParameter R s)
+    (scalingFunctorCat_hermitian R s)
