@@ -298,13 +298,7 @@ def mapHermitianObjects
 
     form := mapHermitianForms R functor hf lam eta hermf X.form
 
-    nonsingular := by
-      -- Expose the stored nonsingularity proof to typeclass search. Functors preserve
-      -- isomorphisms, and the inverse comparison component is also an isomorphism.
-      let : IsIso X.form.val := X.nonsingular
-      change IsIso
-        (functor.map X.form.val ≫ hf.nat_iso.inv.app (op X.M))
-      infer_instance
+    nonsingular := mapNonsingularSesqForm functor X.M hf X.form.val X.nonsingular
 
 omit [StarLinearDuality R C] in
 /-- Composite transport of a nonsingular Hermitian object agrees with successive
@@ -362,29 +356,10 @@ def mapIsometry
     · let : IsIso hisom.val := hisom.property.1
       apply Functor.map_isIso functor hisom.val
 
-    · let DC := HermitianCategory.duality (C := C)
-      let DD := HermitianCategory.duality (C := D)
-      let θ := hf.nat_iso.inv.app
-
-      -- Naturality relates the two ways of dualizing the mapped isometry.
-      have nat : functor.map (DC.map hisom.val.op) ≫ θ (op X.M) =
-          θ (op Y.M) ≫ DD.map (functor.map hisom.val).op := by
-        simpa [DC, DD, θ] using
-          hf.nat_iso.inv.naturality hisom.val.op
-
-      change functor.map hisom.val ≫
-          (functor.map Y.form.val ≫ θ (op Y.M)) ≫
-          DD.map (functor.map hisom.val).op =
-        functor.map X.form.val ≫ θ (op X.M)
-
-      simp only [Category.assoc]
-      rw [← nat]
-
-      -- Apply the functor to the original form-preservation equation,
-      -- then postcompose with the inverse comparison.
-      simpa only [Functor.map_comp, Category.assoc] using
-        congrArg (fun k => functor.map k ≫ θ (op X.M))
-          hisom.property.2
+    · change functor.map hisom.val ≫ mapSesqForms functor hf Y.form.val ≫
+          HermitianCategory.duality.map (functor.map hisom.val).op =
+        mapSesqForms functor hf X.form.val
+      rw [← mapSesqForms_pullback, hisom.property.2]
 
 omit [StarLinearDuality R C] in
 /-- Composite and successive transport of an isometry have the same underlying
@@ -487,33 +462,6 @@ lemma functorHermitianCategoriesId (lam : Z1Mul R) :
     rfl
 
 /-! ## Equivalences induced by Hermitian functors -/
-
-omit [Preadditive C] [Preadditive D]
-  [Functor.Additive (HermitianCategory.duality (C := C))]
-  [Functor.Additive (HermitianCategory.duality (C := D))]
-  [Functor.Additive functor] in
-/-- A faithful functor with a duality comparison transports forms injectively. -/
-lemma mapSesqForms_injective (hf : DualityComparison functor) [functor.Faithful]
-    {M : C} : Function.Injective (mapSesqForms functor hf (M := M)) := by
-  intro h k heq
-  -- Cancel the inverse comparison, then reflect equality through the faithful functor.
-  apply functor.map_injective
-  exact (cancel_mono (hf.nat_iso.inv.app (op M))).mp heq
-
-omit [Preadditive C] [Preadditive D]
-  [Functor.Additive (HermitianCategory.duality (C := C))]
-  [Functor.Additive (HermitianCategory.duality (C := D))]
-  [Functor.Additive functor] in
-/-- Transport commutes with pullback of sesquilinear forms. -/
-lemma mapSesqForms_pullback (hf : DualityComparison functor)
-    {M N : C} (f : M ⟶ N) (h : Sesq N) :
-    mapSesqForms functor hf (f ≫ h ≫ HermitianCategory.duality.map f.op) =
-      functor.map f ≫ mapSesqForms functor hf h ≫
-        HermitianCategory.duality.map (functor.map f).op := by
-  have hn := hf.nat_iso.inv.naturality f.op
-  dsimp at hn
-  simp only [mapSesqForms, Functor.map_comp, Category.assoc]
-  rw [hn]
 
 omit [StarLinearDuality R C] [Functor.Additive functor] in
 /-- Faithfulness of the underlying functor implies faithfulness on isometries. -/

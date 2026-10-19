@@ -218,6 +218,25 @@ def mapSesqForms {M : C} (F : C ⥤ D)
  (hf : DualityComparison F) (h : Sesq M) : Sesq (F.obj M) :=
   (F.map h) ≫ (hf.nat_iso.inv.app (op M))
 
+/-- A faithful functor with a duality comparison transports forms injectively. -/
+lemma mapSesqForms_injective (functor : C ⥤ D) (hf : DualityComparison functor) [functor.Faithful]
+    {M : C} : Function.Injective (mapSesqForms functor hf (M := M)) := by
+  intro h k heq
+  -- Cancel the inverse comparison, then reflect equality through the faithful functor.
+  apply functor.map_injective
+  exact (cancel_mono (hf.nat_iso.inv.app (op M))).mp heq
+
+/-- Transport commutes with pullback of sesquilinear forms. -/
+lemma mapSesqForms_pullback (functor : C ⥤ D) (hf : DualityComparison functor)
+    {M N : C} (f : M ⟶ N) (h : Sesq N) :
+    mapSesqForms functor hf (f ≫ h ≫ HermitianCategory.duality.map f.op) =
+      functor.map f ≫ mapSesqForms functor hf h ≫
+        HermitianCategory.duality.map (functor.map f).op := by
+  have hn := hf.nat_iso.inv.naturality f.op
+  dsimp at hn
+  simp only [mapSesqForms, Functor.map_comp, Category.assoc]
+  rw [hn]
+
 variable [Preadditive C] [Preadditive D] (functor : C ⥤ D) [Functor.Additive functor]
 
 /-- Package transport as an additive homomorphism on spaces of forms.
