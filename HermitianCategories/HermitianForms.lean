@@ -167,6 +167,7 @@ lemma formDoubleDual {M : C} (f : Sesq M) :
 
 omit [Preadditive C] [Functor.Additive (HermitianCategory.duality (C := C))] in
 /-- Taking the adjoint commutes with pulling a form back along a morphism. -/
+@[simp]
 lemma formDual_pullback {M N : C} (f : M ⟶ N) (h : Sesq N) :
     formDual (f ≫ h ≫ HermitianCategory.duality.map f.op) =
       f ≫ formDual h ≫ HermitianCategory.duality.map f.op := by
@@ -277,6 +278,7 @@ def Isometry {M N : C} (lam : Z1Mul R)
 
 omit [StarLinearDuality R C] in
 /-- The identity morphism is an isometry of any λ-Hermitian form, including a singular one. -/
+@[simp]
 lemma idIsIsometry {M : C} (lam : Z1Mul R)
   (hM : LambdaHermitianForm R M lam) : isIsometryLambdaHermitianForms R lam hM hM (𝟙 M) := by
     constructor

@@ -243,6 +243,7 @@ lemma mapHermitianFormsComp {E : Type u} {M : C} [Category.{v} E] [Preadditive E
 omit [StarLinearDuality R C] in
 /-- Transport along the canonical identity comparison leaves the underlying
 form unchanged. Comparing `.val` avoids casting the parameter `1 * lam` to `lam`. -/
+@[simp]
 lemma mapHermitianFormsId {M : C}
   (lam : Z1Mul R)
   (hf : LambdaHermitianForm R M lam) :
@@ -311,6 +312,7 @@ lemma mapHermitianObjectsComp {E : Type u} [Category.{v} E] [Preadditive E] [Lin
 omit [StarLinearDuality R C] in
 /-- Identity transport recovers the original Hermitian object after identifying
 its parameter `1 * lam` with `lam`. -/
+@[simp]
 lemma mapHermitianObjectsId (lam : Z1Mul R) (X : HermitianObject R lam) :
   (castHermitianHermitianCategories (C := C) R (show 1 * lam = lam by ac_rfl)).obj
   (mapHermitianObjects R (Functor.id C) IdIsDualityComparison lam (1 : Z1Mul R) (IdIsHermitianFunctor R)  X) = X := by
@@ -366,6 +368,7 @@ lemma mapIsometryComp {E : Type u} [Category.{v} E] [Preadditive E] [Linear R E]
 
 omit [StarLinearDuality R C] in
 /-- Identity transport leaves the underlying morphism of an isometry unchanged. -/
+@[simp]
 lemma mapIsometryId (lam : Z1Mul R) (X Y : HermitianObject R lam) (hisom : Isometry R lam X.form Y.form) :
   (mapIsometry R (Functor.id C) IdIsDualityComparison lam (1 : Z1Mul R) (IdIsHermitianFunctor R) X Y hisom).val = hisom.val := by
   -- The underlying maps are definitionally those of the composite or identity functor.
@@ -425,6 +428,7 @@ lemma functorHermitianCategoriesComp {E : Type u} [Category.{v} E] [Preadditive 
 omit [StarLinearDuality R C] in
 /-- The functor induced by the canonical identity comparison, followed by the
 parameter cast, equals the identity functor on Hermitian objects. -/
+@[simp]
 lemma functorHermitianCategoriesId (lam : Z1Mul R) :
   (functorHermitianCategories R (Functor.id C) (IdIsDualityComparison) lam 1 (IdIsHermitianFunctor R))
   ⋙ (castHermitianHermitianCategories R (show 1*lam = lam by ac_rfl))
