@@ -202,48 +202,17 @@ def LambdaHermitianForms (M : C) (lam : Z1Mul R) : AddSubgroup (Sesq M) where
   carrier := { f | IsLambdaHermitian R lam f }
 
   zero_mem' := by
-    simp only [IsLambdaHermitian, Set.mem_ofPred_eq, formDual]
-    -- Isolate the functor's zero mapping:
-    have H_zero : HermitianCategory.duality.map (0 : Sesq M).op = 0 := by
-      exact Functor.map_zero HermitianCategory.duality _ _
-
-    rw [H_zero]
-    rw [CategoryTheory.Limits.comp_zero]
-    rw [smul_zero]
+    simp only [Set.mem_ofPred_eq, IsLambdaHermitian, formDual_zero, smul_zero]
 
   add_mem' := by
     intro f g hf hg
-    simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
-    calc formDual (f + g)
-      _ = formDual f + formDual g := by
-        simp only [formDual]
-        rw [← CategoryTheory.Preadditive.comp_add]
-
-        -- Explicitly provide the functor and the morphisms to map_add.
-        -- Lean natively knows that f.op + g.op is the exact same thing as (f + g).op
-        have H_add : HermitianCategory.duality.map f.op + HermitianCategory.duality.map g.op = HermitianCategory.duality.map (f + g).op := by
-          exact (Functor.map_add HermitianCategory.duality).symm
-
-        rw [H_add]
-      -- Substitute the Hermitian equations for the two adjoints.
-      _ = ((lam : Rˣ) : R) • f + ((lam : Rˣ) : R) • g := by rw [hf, hg]
-      _ = ((lam : Rˣ) : R) • (f + g) := by rw [smul_add]
+    simp only [Set.mem_ofPred_eq, IsLambdaHermitian] at *
+    rw [formDual_add, hf, hg, smul_add]
 
   neg_mem' := by
     intro f hf
-    simp only [IsLambdaHermitian, Set.mem_ofPred_eq] at *
-    calc formDual (-f)
-      _ = -formDual f := by
-        simp only [formDual]
-        rw [← CategoryTheory.Preadditive.comp_neg]
-
-        -- Explicitly provide the functor and the morphism to map_neg
-        have H_neg : -(HermitianCategory.duality.map f.op) = HermitianCategory.duality.map (-f).op := by
-          exact (Functor.map_neg HermitianCategory.duality).symm
-
-        rw [H_neg]
-      _ = -(((lam : Rˣ) : R) • f) := by rw [hf]
-      _ = ((lam : Rˣ) : R) • (-f) := by rw [smul_neg]
+    simp only [Set.mem_ofPred_eq, IsLambdaHermitian] at *
+    rw [formDual_neg, hf, smul_neg]
 
 /--
 A λ-Hermitian form on M is an element of the subgroup of λ-Hermitian forms.
