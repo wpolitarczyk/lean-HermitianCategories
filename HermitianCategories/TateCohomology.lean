@@ -8,13 +8,14 @@ import Mathlib.Algebra.Star.Basic
 import Mathlib.Algebra.Group.Subgroup.Basic
 import Mathlib.GroupTheory.QuotientGroup.Basic
 
-import Mathlib.Tactic.Ring
 
 /-!
-# Rings with involution and their Tate cohomology groups
+# Additive involutions and Tate cohomology of rings with involution
 
-This file defines explicit cycle/boundary presentations in degrees zero and one
-for the order-two action given by `star`. For the additive group of R:
+`AdditiveTate` defines cycle/boundary presentations for an explicit additive
+endomorphism of an abelian group, with boundary-cycle inclusions proved under
+involutivity. The ring API specializes these constructions to `star`.
+For the additive group of R:
 
 * Z⁰ consists of fixed elements; B⁰ consists of traces y + star y.
 * Z¹ consists of elements with x + star x = 0; B¹ consists of differences y - star y.
@@ -34,22 +35,93 @@ set_option linter.style.emptyLine false
 set_option linter.style.docString false
 set_option linter.style.longLine false
 
+/-! ## Additive constructions for an explicit endomorphism
+
+The kernels and ranges need only additivity. When the endomorphism is involutive,
+the boundary subgroups lie in the cycle subgroups and the quotients below are the
+additive Tate groups. Keeping the endomorphism explicit allows several involutions
+on the same underlying group without competing typeclass instances.
+-/
+
+namespace AdditiveTate
+
+variable {A : Type*} [AddCommGroup A] (τ : A →+ A)
+
+/-- The trace endomorphism `1 + τ`. -/
+def traceHom : A →+ A := AddMonoidHom.id A + τ
+
+/-- The difference endomorphism `1 - τ`. -/
+def differenceHom : A →+ A := AddMonoidHom.id A - τ
+
+@[simp] lemma traceHom_apply (x : A) : traceHom τ x = x + τ x := rfl
+@[simp] lemma differenceHom_apply (x : A) : differenceHom τ x = x - τ x := rfl
+
+/-- Degree-zero cycles: fixed elements of τ. -/
+def Z0 : AddSubgroup A := (differenceHom τ).ker
+
+/-- Degree-zero boundaries: traces. -/
+def B0 : AddSubgroup A := (traceHom τ).range
+
+/-- Degree-one cycles: elements annihilated by the trace. -/
+def Z1 : AddSubgroup A := (traceHom τ).ker
+
+/-- Degree-one boundaries: differences. -/
+def B1 : AddSubgroup A := (differenceHom τ).range
+
+@[simp] lemma mem_Z0 (x : A) : x ∈ Z0 τ ↔ x = τ x := by
+  simp [Z0, sub_eq_zero]
+
+@[simp] lemma mem_B0 (x : A) : x ∈ B0 τ ↔ ∃ y, x = y + τ y := by
+  simp [B0, AddMonoidHom.mem_range, eq_comm]
+
+@[simp] lemma mem_Z1 (x : A) : x ∈ Z1 τ ↔ x + τ x = 0 := Iff.rfl
+
+@[simp] lemma mem_B1 (x : A) : x ∈ B1 τ ↔ ∃ y, x = y - τ y := by
+  simp [B1, AddMonoidHom.mem_range, eq_comm]
+
+/-- For an involution, every trace is fixed. -/
+lemma B0_le_Z0 (hτ : Function.Involutive τ) : B0 τ ≤ Z0 τ := by
+  intro x hx
+  obtain ⟨y, rfl⟩ := (mem_B0 τ x).mp hx
+  rw [mem_Z0, map_add, hτ y, add_comm]
+
+/-- For an involution, every difference has trace zero. -/
+lemma B1_le_Z1 (hτ : Function.Involutive τ) : B1 τ ≤ Z1 τ := by
+  intro x hx
+  obtain ⟨y, rfl⟩ := (mem_B1 τ x).mp hx
+  rw [mem_Z1, map_sub, hτ y]
+  rw [← neg_sub y (τ y), add_neg_cancel]
+
+/-- Restrict traces to the cycle group. For involutive τ, `B0_le_Z0` shows that
+this includes every trace. -/
+def boundariesZero : AddSubgroup (Z0 τ) := (B0 τ).addSubgroupOf (Z0 τ)
+
+/-- Restrict differences to the cycle group. For involutive τ, `B1_le_Z1` shows
+that this includes every difference. -/
+def boundariesOne : AddSubgroup (Z1 τ) := (B1 τ).addSubgroupOf (Z1 τ)
+
+/-- Fixed elements modulo traces, the degree-zero Tate group when τ is involutive.
+For arbitrary τ the denominator is the intersection of boundaries with cycles. -/
+abbrev cohomologyZero := Z0 τ ⧸ boundariesZero τ
+
+/-- Trace-zero elements modulo differences, the degree-one Tate group when τ is
+involutive. For arbitrary τ the denominator is the intersection with cycles. -/
+abbrev cohomologyOne := Z1 τ ⧸ boundariesOne τ
+
+end AdditiveTate
+
 -- Let R be a commutative ring equipped with an involution (star operation)
 variable (R : Type u) [CommRing R] [StarRing R]
 
 /-! ## Additive Tate cohomology groups -/
 
 /-- The additive trace map associated with the involution. -/
-def tateTraceHom : R →+ R where
-  toFun x := x + star x
-  map_zero' := by simp
-  map_add' x y := by simp only [star_add]; ac_rfl
+def tateTraceHom : R →+ R :=
+  AdditiveTate.traceHom (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 /-- The additive difference map associated with the involution. -/
-def tateDifferenceHom : R →+ R where
-  toFun x := x - star x
-  map_zero' := by simp
-  map_add' x y := by rw [star_add, sub_add_sub_comm]
+def tateDifferenceHom : R →+ R :=
+  AdditiveTate.differenceHom (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 @[simp] lemma tateTraceHom_apply (x : R) : tateTraceHom R x = x + star x := rfl
 @[simp] lemma tateDifferenceHom_apply (x : R) : tateDifferenceHom R x = x - star x := rfl
@@ -61,10 +133,11 @@ def isZeroCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x = star x
 
 /-- Fixed elements are the kernel of the difference map. -/
-def Z0Add : AddSubgroup R := (tateDifferenceHom R).ker
+def Z0Add : AddSubgroup R :=
+  AdditiveTate.Z0 (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 @[simp] lemma mem_Z0Add (x : R) : x ∈ Z0Add R ↔ isZeroCycleAdd x := by
-  simp [Z0Add, isZeroCycleAdd, sub_eq_zero]
+  exact AdditiveTate.mem_Z0 _ x
 
 /--
 The degree-zero boundary condition: x is the trace y + star y of some ring element y.
@@ -73,24 +146,17 @@ def isZeroNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y + star y
 
 /-- Additive degree-zero boundaries are the range of the trace map. -/
-def B0Add : AddSubgroup R := (tateTraceHom R).range
+def B0Add : AddSubgroup R :=
+  AdditiveTate.B0 (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 @[simp] lemma mem_B0Add (x : R) : x ∈ B0Add R ↔ isZeroNormAdd x := by
-  simp [B0Add, AddMonoidHom.mem_range, isZeroNormAdd, eq_comm]
+  exact AdditiveTate.mem_B0 _ x
 
 /--
 B⁰(R) is an additive subgroup of Z⁰(R).
 -/
-lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R := by
-  intro x hx
-  rw [mem_B0Add] at hx
-  rw [mem_Z0Add]
-  rcases hx with ⟨y, rfl⟩
-
-  -- Unfold the subgroup membership into the `isZeroCycleAdd` equation
-  change y + star y = star (y + star y)
-
-  rw [star_add, star_star, add_comm]
+lemma B0Add_le_Z0Add : B0Add R ≤ Z0Add R :=
+  AdditiveTate.B0_le_Z0 (starAddEquiv : R ≃+ R).toAddMonoidHom star_star
 
 /--
 Mathematically restrict B⁰(R) to be an AddSubgroup of Z⁰(R).
@@ -98,14 +164,14 @@ Mathematically restrict B⁰(R) to be an AddSubgroup of Z⁰(R).
 inclusion theorem ensures this represents all of B⁰(R), not just an intersection.
 -/
 def B0Add_in_Z0Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z0Add R) :=
-  (B0Add R).addSubgroupOf (Z0Add R)
+  AdditiveTate.boundariesZero (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 /--
 The additive Tate cohomology group in degree zero: fixed elements modulo traces.
 The numerator `↥(Z0Add R)` is a subtype: a ring element paired with its cycle proof.
 -/
 abbrev TateCohomologyZeroAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
-  ↥(Z0Add R) ⧸ B0Add_in_Z0Add R
+  AdditiveTate.cohomologyZero (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 -- The quotient inherits its additive group structure from Mathlib's quotient construction.
 instance : AddCommGroup (TateCohomologyZeroAdd R) := inferInstance
@@ -117,7 +183,8 @@ def isOneCycleAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   x + star x = 0
 
 /-- Additive degree-one cycles are the kernel of the trace map. -/
-def Z1Add : AddSubgroup R := (tateTraceHom R).ker
+def Z1Add : AddSubgroup R :=
+  AdditiveTate.Z1 (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 @[simp] lemma mem_Z1Add (x : R) : x ∈ Z1Add R ↔ isOneCycleAdd x := by
   rfl
@@ -129,51 +196,29 @@ def isOneNormAdd {R : Type u} [CommRing R] [StarRing R] (x : R) : Prop :=
   ∃ y : R, x = y - star y
 
 /-- Additive degree-one boundaries are the range of the difference map. -/
-def B1Add : AddSubgroup R := (tateDifferenceHom R).range
+def B1Add : AddSubgroup R :=
+  AdditiveTate.B1 (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 @[simp] lemma mem_B1Add (x : R) : x ∈ B1Add R ↔ isOneNormAdd x := by
-  simp [B1Add, AddMonoidHom.mem_range, isOneNormAdd, eq_comm]
+  exact AdditiveTate.mem_B1 _ x
 
 /--
 B¹(R) is an additive subgroup of Z¹(R).
 -/
-lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R := by
-  intro x hx
-  rw [mem_B1Add] at hx
-  rw [mem_Z1Add]
-  rcases hx with ⟨y, rfl⟩
-  change (y - star y) + star (y - star y) = 0
-
-  -- Push the star inside, canceling the double star on the second 'y'
-  rw [star_sub, star_star]
-
-  -- The goal is now `y - star y + (star y - y) = 0`, which is pure algebra!
-  ring
-  -- Alternative manual cancellation proof, kept for comparison with `ring`:
-  -- intro x hx
-  -- rcases hx with ⟨y, rfl⟩
-
-  -- -- Unfold the membership of Z¹(R)
-  -- change (y - star y) + star (y - star y) = 0
-
-  -- -- Step-by-step collapse to zero
-  -- calc (y - star y) + star (y - star y)
-  --   _ = (y - star y) + (star y - star (star y)) := by rw [star_sub]
-  --   _ = (y - star y) + (star y - y) := by rw [star_star]
-  --   _ = (y - star y) + -(y - star y) := by rw [← neg_sub]
-  --   _ = 0 := by rw [add_neg_cancel]
+lemma B1Add_le_Z1Add : B1Add R ≤ Z1Add R :=
+  AdditiveTate.B1_le_Z1 (starAddEquiv : R ≃+ R).toAddMonoidHom star_star
 
 /--
 Mathematically restrict B¹(R) to be an AddSubgroup of Z¹(R).
 -/
 def B1Add_in_Z1Add (R : Type u) [CommRing R] [StarRing R] : AddSubgroup (Z1Add R) :=
-  (B1Add R).addSubgroupOf (Z1Add R)
+  AdditiveTate.boundariesOne (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 /--
 The additive Tate cohomology group in degree one: cycles modulo differences y - star y.
 -/
 abbrev TateCohomologyOneAdd (R : Type u) [CommRing R] [StarRing R] : Type u :=
-  ↥(Z1Add R) ⧸ B1Add_in_Z1Add R
+  AdditiveTate.cohomologyOne (starAddEquiv : R ≃+ R).toAddMonoidHom
 
 instance : AddCommGroup (TateCohomologyOneAdd R) := inferInstance
 
@@ -225,6 +270,20 @@ lemma TateCohomologyZeroAddVanishes
   constructor
   intro a b
   rw [h_zero a, h_zero b]
+
+/-- If additive degree-zero Tate cohomology vanishes, the fixed element 1 is
+ a trace, so the ring has a generalized half-unit. -/
+lemma existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes
+    (h : Subsingleton (TateCohomologyZeroAdd R)) :
+    ∃ r : R, isGeneralizedHalfUnit R r := by
+  let oneCycle : AdditiveTate.Z0 (starAddEquiv : R ≃+ R).toAddMonoidHom :=
+    ⟨1, (mem_Z0Add R 1).mpr (by simp [isZeroCycleAdd])⟩
+  have hzero : (QuotientAddGroup.mk oneCycle : TateCohomologyZeroAdd R) = 0 :=
+    h.elim _ _
+  rw [QuotientAddGroup.eq_zero_iff] at hzero
+  change (1 : R) ∈ B0Add R at hzero
+  obtain ⟨r, hr⟩ := (mem_B0Add R 1).mp hzero
+  exact ⟨r, hr.symm⟩
 
 /-- A generalized half-unit also makes every degree-one cycle a boundary.
 The same witness a*r works, now using star a = -a and the difference map. -/
