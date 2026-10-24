@@ -23,7 +23,7 @@ parameter casts where necessary.
 A linear equivalence with a Hermitian comparison induces an equivalence of
 Hermitian-form categories. `equivalenceHermitianCategories` bundles this result.
 Scaling is the special case whose comparison components are `s • 𝟙`: it scales
-forms by `s⁻¹`, changes their parameter by `s * star (s⁻¹)`, and gives an equivalence.
+forms by `s`, changes their parameter by `star s * s⁻¹`, and gives an equivalence.
 -/
 
 open CategoryTheory
@@ -55,13 +55,12 @@ predicate supplies the extra compatibility needed to transport Hermitian forms. 
 def HermitianFunctor (hf : DualityComparison functor)
     (eta : Z1Mul R) : Prop :=
   ∀ M : C,
-    hf.nat_iso.hom.app
-        (op ((HermitianCategory.duality (C := C)).obj (op M))) =
-      ((eta : Rˣ) : R) •
-        ((HermitianCategory.duality (C := D)).map
-            (hf.nat_iso.hom.app (op M)).op ≫
-          (HermitianCategory.doubleDualIso (C := D)).inv.app (functor.obj M) ≫
-          functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app M))
+    (HermitianCategory.doubleDualIso (C := D)).hom.app (functor.obj M) ≫
+      (HermitianCategory.duality (C := D)).map (hf.nat_iso.hom.app (op M)).op =
+    ((eta : Rˣ) : R) •
+      (functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app M) ≫
+        hf.nat_iso.hom.app
+          (op ((HermitianCategory.duality (C := C)).obj (op M))))
 
 omit [Preadditive C] [Linear R C]
   [Functor.Additive (HermitianCategory.duality (C := C))] [StarLinearDuality R C] in
@@ -81,29 +80,21 @@ lemma compHermitianFunctors {E : Type u} [Category E] [Preadditive E] [Linear R 
     (compDualityComparison F G hfDC hgDC)
     (eta1 * eta2) := by
     intro M
-    -- Use the forward component formula for the composite comparison.
+    -- Expand the composite and move the dual of F's comparison by naturality.
     simp only [compDualityComparison_hom_app]
     dsimp
-    -- Apply compatibility for F and pull its parameter through G.
-    rw [hf M, Functor.map_smul]
-    simp only [Functor.map_comp, Linear.comp_smul]
-    -- Naturality moves the dual of F's comparison past G's comparison.
-    -- The postcomposition in `naturality_assoc` retains the double-dual inverse
-    -- and the image of the source double-dual map already present in the goal.
-    have hn := hgDC.nat_iso.hom.naturality_assoc
-      (hfDC.nat_iso.hom.app (op M)).op
-      (G.map ((HermitianCategory.doubleDualIso (C := D)).inv.app (F.obj M)) ≫
-        G.map (F.map ((HermitianCategory.doubleDualIso (C := C)).hom.app M)))
+    rw [Functor.map_comp]
+    have hn := hgDC.nat_iso.hom.naturality (hfDC.nat_iso.hom.app (op M)).op
     dsimp at hn
-    rw [← hn, hg (F.obj M)]
-    -- Combine the scalars and cancel the double-dual maps inside G.
-    simp only [Linear.comp_smul, Linear.smul_comp, smul_smul, Category.assoc,
-      ← G.map_comp, Iso.hom_inv_id_app_assoc]
+    rw [← Category.assoc, hg (F.obj M), Linear.smul_comp, Category.assoc,
+      ← hn, ← Category.assoc, ← G.map_comp, hf M, Functor.map_smul,
+      Linear.smul_comp, smul_smul, G.map_comp, Category.assoc]
+    simp only [mul_comm]
 
 omit [Functor.Additive (HermitianCategory.duality (C := C))] [StarLinearDuality R C] in
 /-- The canonical comparison for the identity functor is Hermitian with parameter 1.
-Its comparison components are identities, and the double-dual inverse and forward
-maps cancel. Neither additivity nor conjugate-linearity of the duality is needed. -/
+Its comparison components are identities, so both sides reduce to the
+double-dual map. Neither additivity nor conjugate-linearity of the duality is needed. -/
 lemma IdIsHermitianFunctor : HermitianFunctor R (Functor.id C) IdIsDualityComparison (1 : Z1Mul R) := by
   intro M
   simp
@@ -151,7 +142,7 @@ lemma mapSesqForms_formDual (hf : DualityComparison functor) (eta : Z1Mul R)
     formDual (mapSesqForms functor hf h) =
       ((eta : Rˣ) : R) • mapSesqForms functor hf (formDual h) := by
   let F := functor
-  let θ := hf.nat_iso.inv.app
+  let θ := hf.nat_iso.hom.app
   let DD := HermitianCategory.duality (C := D)
   -- Greek η here is the target double-dual isomorphism; `eta` is the scalar parameter.
   let η := HermitianCategory.doubleDualIso (C := D)
@@ -162,41 +153,15 @@ lemma mapSesqForms_formDual (hf : DualityComparison functor) (eta : Z1Mul R)
   let j := HermitianCategory.doubleDualIso (C := C)
   let N := DC.obj (op M)
 
-  -- Naturality of the inverse comparison.
+  -- Naturality of the forward comparison.
   have nat : F.map (DC.map h.op) ≫ θ (op M) =
       θ (op N) ≫ DD.map (F.map h).op := by
     simpa [F, DC, DD, θ, N] using
-      hf.nat_iso.inv.naturality h.op
+      hf.nat_iso.hom.naturality h.op
 
-  -- The duals of the comparison and its inverse cancel.
-  have cancel_dual : DD.map (θ (op M)).op ≫
-      DD.map (hf.nat_iso.hom.app (op M)).op = 𝟙 _ := by
-    rw [← DD.map_comp, ← op_comp]
-    simp [θ]
-
-  -- Express the Hermitian condition using the inverse comparison.
+  -- Compatibility is stated directly in the direction used by transport.
   have compat : η.hom.app (F.obj M) ≫ DD.map (θ (op M)).op =
-      ((eta : Rˣ) : R) • (F.map (j.hom.app M) ≫ θ (op N)) := by
-    -- Compose the compatibility equation on both sides with inverse comparison maps.
-    -- This lets us replace its forward comparison components by the inverses used in T.
-    have hc := congrArg
-      (fun k =>
-        η.hom.app (F.obj M) ≫
-          DD.map (θ (op M)).op ≫ k ≫ θ (op N))
-      (hermf M)
-
-    simp only [Linear.comp_smul, Linear.smul_comp, Category.assoc] at hc
-    rw [← Category.assoc (DD.map (θ (op M)).op)
-      (DD.map (hf.nat_iso.hom.app (op M)).op),
-      cancel_dual, Category.id_comp] at hc
-    simp only [θ, N, DC, DD, η, F, Iso.hom_inv_id_app,
-      Iso.hom_inv_id_app_assoc] at hc
-
-    -- Reduce the object expressions before cancelling the remaining identity.
-    dsimp at hc
-    simp only [Category.comp_id] at hc
-
-    exact hc
+      ((eta : Rˣ) : R) • (F.map (j.hom.app M) ≫ θ (op N)) := hermf M
 
   -- Move the adjoint through transport using compatibility and naturality.
   rw [op_comp, DD.map_comp, ← Category.assoc, compat, Linear.smul_comp,
@@ -206,8 +171,8 @@ lemma mapSesqForms_formDual (hf : DualityComparison functor) (eta : Z1Mul R)
 
 /-- Transport λ-Hermitian forms to (eta * λ)-Hermitian forms.
 For the convention h† = λ • h, compatibility gives T(h)† = eta • T(h†).
-The underlying transported form is F(h) followed by the inverse comparison
-F(D(M)) ⟶ D(F(M)); this explains the use of `hf.nat_iso.inv` in the proof. -/
+The underlying transported form is F(h) followed by the forward comparison
+F(D(M)) ⟶ D(F(M)). -/
 def mapHermitianForms {M : C}
     (hf : DualityComparison functor)
     (lam eta : Z1Mul R)
@@ -520,7 +485,7 @@ lemma functorHermitianCategories_essSurj (hf : DualityComparison functor)
     let DD := HermitianCategory.duality (C := D)
     -- Pull back Y's form along e, then undo the comparison before lifting it.
     let k : Sesq (functor.obj M) := e.hom ≫ Y.form.val ≫ DD.map e.hom.op
-    let h : Sesq M := functor.preimage (k ≫ hf.nat_iso.hom.app (op M))
+    let h : Sesq M := functor.preimage (k ≫ hf.nat_iso.inv.app (op M))
     -- Transport of the lift recovers the pulled-back form exactly.
     have ht : mapSesqForms functor hf h = k := by
       simp [mapSesqForms, h, Category.assoc]
@@ -571,12 +536,12 @@ noncomputable def equivalenceHermitianCategories (hf : DualityComparison functor
 
 /-! ## Scaling functors -/
 
-/-- The norm-one unit σ(s) = s * star (s⁻¹) governing the change in Hermitian parameter.
-Indeed, (s⁻¹ • h)† = star (s⁻¹) • h† = (σ(s) * λ) • (s⁻¹ • h)
+/-- The norm-one unit σ(s) = star s * s⁻¹ governing the change in Hermitian parameter.
+Indeed, (s • h)† = star s • h† = (σ(s) * λ) • (s • h)
 when h† = λ • h. Scalars in this identity are understood as elements of R. -/
 def scalingParameter (s : Rˣ) : Z1Mul R :=
-  ⟨s * star (s⁻¹), by
-    change (s * star (s⁻¹)) * star (s * star (s⁻¹)) = 1
+  ⟨star s * s⁻¹, by
+    change (star s * s⁻¹) * star (star s * s⁻¹) = 1
     simp [mul_comm, mul_left_comm, mul_assoc]⟩
 
 /-- The parameter changes associated with two units multiply. -/
@@ -593,7 +558,7 @@ lemma scalingParameter_one : scalingParameter R 1 = 1 := by
 
 /-- A duality comparison for the identity functor, with components `s • 𝟙`.
 This is comparison data, not a functor between categories of Hermitian forms.
-Transport uses the inverse comparison, so it scales forms by `s⁻¹`. -/
+Transport uses the forward comparison, so it scales forms by `s`. -/
 def scalingFunctorCat (s : Rˣ) : DualityComparison (Functor.id C) where
   nat_iso := NatIso.ofComponents
     (fun X =>
@@ -615,24 +580,22 @@ lemma scalingFunctorCat_hermitian (s : Rˣ) :
     HermitianFunctor R (Functor.id C)
       (scalingFunctorCat R s) (scalingParameter R s) := by
   intro M
-  change (s : R) • 𝟙 _ =
-    ((s * star (s⁻¹) : Rˣ) : R) •
-      (HermitianCategory.duality.map
-          ((s : R) • 𝟙 (HermitianCategory.duality.obj (op M))).op ≫
-        HermitianCategory.doubleDualIso.inv.app M ≫
-        HermitianCategory.doubleDualIso.hom.app M)
+  change HermitianCategory.doubleDualIso.hom.app M ≫
+      HermitianCategory.duality.map ((s : R) • 𝟙 _).op =
+    ((star s * s⁻¹ : Rˣ) : R) •
+      (HermitianCategory.doubleDualIso.hom.app M ≫ ((s : R) • 𝟙 _))
   rw [StarLinearDuality.map_smul]
-  simp [smul_smul, mul_assoc, ← star_mul]
+  simp [Linear.comp_smul, smul_smul, mul_assoc]
 
 omit [StarRing R] [Functor.Additive (HermitianCategory.duality (C := C))]
     [StarLinearDuality R C] in
-/-- Transport along the scaling comparison multiplies a form by the inverse unit. -/
+/-- Transport along the scaling comparison multiplies a form by the unit. -/
 @[simp] lemma scalingFunctorCat_mapSesq {M : C} (s : Rˣ) (h : Sesq M) :
     mapSesqForms (Functor.id C) (scalingFunctorCat R s) h =
-      ((s⁻¹ : Rˣ) : R) • h := by
+      (s : R) • h := by
   simp [mapSesqForms, scalingFunctorCat, Linear.comp_smul]
 
-/-- Scale forms by `s⁻¹`, changing their parameter by `s * star (s⁻¹)`.
+/-- Scale forms by `s`, changing their parameter by `star s * s⁻¹`.
 The underlying objects and morphisms are unchanged. -/
 def scalingHermitianCategories (s : Rˣ) (lam : Z1Mul R) :
     HermitianFormCat (C := C) R lam ⥤

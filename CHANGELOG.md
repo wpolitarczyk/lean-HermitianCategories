@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.1 — 2026-10-24
+
+### Changes
+
+- Reverse `DualityComparison.nat_iso`: its forward components now go from
+  `F(D_C(X))` to `D_D(F(X))`, and form transport uses `.hom`.
+- Express ordinary and scalar-dependent double-dual compatibility directly
+  through forward comparison components.
+- Make `scalingHermitianCategories R s lam` multiply forms by `s`, with
+  `scalingParameter R s = star s * s⁻¹`.
+
+### Migration notes
+
+- For an existing comparison, supply the symmetric natural isomorphism to
+  preserve its transported forms. Update coherence proofs to the new equations;
+  `HermitianFunctor` still gives the parameter change `lam ↦ eta * lam`.
+- Composite forward components are now `G.map θF ≫ θG`; their inverses have
+  the reverse order. Reconstruction of source forms uses `.inv`.
+- Scaling by `s` previously multiplied forms by `s⁻¹`. Pass `s⁻¹` to the new
+  scaling API to recover that behavior and its corresponding target parameter.
+
 ## 0.2.0 — 2026-10-19
 
 Refactor the abstract Hermitian-form framework to reuse existing proofs and

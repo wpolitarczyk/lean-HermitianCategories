@@ -98,27 +98,28 @@ variable {D : Type u} [Category.{v} D] [HermitianCategory D]
 /-- A natural comparison between the dualities, without a coherence condition.
 The underlying functor is a parameter; this structure supplies its additional data. -/
 structure DualityComparison (functor : C ⥤ D) where
-  /-- At `op X`, the forward component goes from D_D(F(X)) to F(D_C(X)).
+  /-- At `op X`, the forward component goes from F(D_C(X)) to D_D(F(X)).
   Here D_C and D_D denote the dualities on C and D respectively. -/
-  nat_iso : functor.op ⋙ (HermitianCategory.duality (C := D)) ≅ (HermitianCategory.duality (C := C) ⋙ functor)
+  nat_iso : (HermitianCategory.duality (C := C) ⋙ functor) ≅ functor.op ⋙ (HermitianCategory.duality (C := D))
 
 /-- A comparison satisfying ordinary double-dual coherence.
 Use `toDualityComparison` to supply its comparison to the transport constructions. -/
 structure DualityPreservingFunctor (functor : C ⥤ D)
     extends DualityComparison functor where
-  /-- Both sides go from F(X) to F(D_C²(X)). The right side first uses the
-  double-dual map in D, then the dual of the inverse comparison at X, and finally
-  the forward comparison at D_C(X). Naturality alone does not impose this condition. -/
+  /-- Both sides go from F(X) to D_D(F(D_C(X))). The left side uses the
+  target double-dual map and the dual of the forward comparison; the right side
+  uses the image of the source double-dual map and the forward comparison.
+  Naturality alone does not impose this condition. -/
   coherence : ∀ X : C,
-    functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app X) =
     (HermitianCategory.doubleDualIso (C := D)).hom.app (functor.obj X) ≫
-    (HermitianCategory.duality (C := D)).map (nat_iso.inv.app (op X)).op ≫
+    (HermitianCategory.duality (C := D)).map (nat_iso.hom.app (op X)).op =
+    functor.map ((HermitianCategory.doubleDualIso (C := C)).hom.app X) ≫
     nat_iso.hom.app (op ((HermitianCategory.duality (C := C)).obj (op X)))
 
 /-- Compose comparisons of dualities for F and G.
 At X, the forward component is the composite
-`D_E(G(F(X))) ⟶ G(D_D(F(X))) ⟶ G(F(D_C(X)))`:
-first use G's comparison at F(X), then apply G to F's comparison at X.
+`G(F(D_C(X))) ⟶ G(D_D(F(X))) ⟶ D_E(G(F(X)))`:
+first apply G to F's comparison at X, then use G's comparison at F(X).
 Whiskering and associators supply naturality, without any coherence assumptions. -/
 def compDualityComparison {E : Type u} [Category.{v} E] [HermitianCategory E]
   (F : C ⥤ D)
@@ -132,25 +133,22 @@ def compDualityComparison {E : Type u} [Category.{v} E] [HermitianCategory E]
     -- Construct the single `nat_iso` field of the comparison.
     refine ⟨?_⟩
     -- Opposites commute definitionally with functor composition.
-    change (F.op ⋙ G.op) ⋙ DE ≅ DC ⋙ (F ⋙ G)
-    -- Associators align the source and target of the two whiskered comparisons.
-    -- Their components are identities; only the comparison maps change the forms.
-    calc  (F.op ⋙ G.op) ⋙ DE
-      _ ≅ F.op ⋙ (G.op ⋙ DE) := by apply Functor.associator
-      -- Evaluate G's comparison on objects and arrows coming from F.op.
-      _ ≅ F.op ⋙ (DD ⋙ G) := by apply Functor.isoWhiskerLeft F.op hg.nat_iso
-      _ ≅ (F.op ⋙ DD) ⋙ G := by apply Functor.associator
-      -- Apply G to the components of F's comparison.
-      _ ≅ (DC ⋙ F) ⋙ G := by apply Functor.isoWhiskerRight hf.nat_iso G
-      _ ≅ DC ⋙ (F ⋙ G) := by apply Functor.associator
+    change DC ⋙ (F ⋙ G) ≅ (F.op ⋙ G.op) ⋙ DE
+    -- Whisker F's comparison by G, then G's comparison by F.op.
+    calc DC ⋙ (F ⋙ G)
+      _ ≅ (DC ⋙ F) ⋙ G := (Functor.associator DC F G).symm
+      _ ≅ (F.op ⋙ DD) ⋙ G := Functor.isoWhiskerRight hf.nat_iso G
+      _ ≅ F.op ⋙ (DD ⋙ G) := Functor.associator F.op DD G
+      _ ≅ F.op ⋙ (G.op ⋙ DE) := Functor.isoWhiskerLeft F.op hg.nat_iso
+      _ ≅ (F.op ⋙ G.op) ⋙ DE := (Functor.associator F.op G.op DE).symm
 
-/-- The forward composite comparison first uses G's comparison, then the image of F's. -/
+/-- The forward composite comparison first uses the image of F's comparison, then G's. -/
 @[simp]
 lemma compDualityComparison_hom_app {E : Type u} [Category.{v} E] [HermitianCategory E]
     (F : C ⥤ D) (G : D ⥤ E) (hf : DualityComparison F) (hg : DualityComparison G)
     (X : Cᵒᵖ) :
     (compDualityComparison F G hf hg).nat_iso.hom.app X =
-      hg.nat_iso.hom.app (F.op.obj X) ≫ G.map (hf.nat_iso.hom.app X) := by
+      G.map (hf.nat_iso.hom.app X) ≫ hg.nat_iso.hom.app (F.op.obj X) := by
   simp [compDualityComparison, Trans.trans]
 
 /-- The inverse composite comparison applies the inverse components in reverse order. -/
@@ -159,22 +157,21 @@ lemma compDualityComparison_inv_app {E : Type u} [Category.{v} E] [HermitianCate
     (F : C ⥤ D) (G : D ⥤ E) (hf : DualityComparison F) (hg : DualityComparison G)
     (X : Cᵒᵖ) :
     (compDualityComparison F G hf hg).nat_iso.inv.app X =
-      G.map (hf.nat_iso.inv.app X) ≫ hg.nat_iso.inv.app (F.op.obj X) := by
+      hg.nat_iso.inv.app (F.op.obj X) ≫ G.map (hf.nat_iso.inv.app X) := by
   simp [compDualityComparison, Trans.trans]
 
 /-- The identity functor carries a canonical comparison of dualities.
 Identify its opposite with the identity on Cᵒᵖ, then use the unitors to compare
-`Id ⋙ D` with `D ⋙ Id`. Both comparison components are identity morphisms. -/
+`D ⋙ Id` with `Id ⋙ D`. Both comparison components are identity morphisms. -/
 def IdIsDualityComparison : DualityComparison (Functor.id C) := by
   let DC := HermitianCategory.duality (C := C)
   refine ⟨?_⟩
-  change (Functor.id C).op ⋙ DC ≅ DC ⋙ (Functor.id C)
-  calc (Functor.id C).op ⋙ DC
-    -- Whisker the comparison of opposite identity functors by the duality.
-    _ ≅ (Functor.id Cᵒᵖ) ⋙ DC := by apply Functor.isoWhiskerRight (Functor.opId C) DC
-    -- Remove the identity on the left and insert it on the right.
-    _ ≅ DC                      := by apply Functor.leftUnitor DC
-    _ ≅ DC ⋙ (Functor.id C)    := by apply Functor.rightUnitor DC
+  change DC ⋙ (Functor.id C) ≅ (Functor.id C).op ⋙ DC
+  calc DC ⋙ (Functor.id C)
+    _ ≅ DC := Functor.rightUnitor DC
+    _ ≅ (Functor.id Cᵒᵖ) ⋙ DC := (Functor.leftUnitor DC).symm
+    _ ≅ (Functor.id C).op ⋙ DC :=
+      Functor.isoWhiskerRight (Functor.opId C).symm DC
 
 /-- The forward component of the identity comparison is an identity morphism. -/
 @[simp]
@@ -192,7 +189,7 @@ lemma IdIsDualityComparison_inv_app (X : Cᵒᵖ) :
 
 /-- Compose duality-preserving functors using `compDualityComparison`.
 The composite satisfies ordinary double-dual coherence: expand coherence for F
-and G, then use naturality of G's comparison at the opposite of F's inverse
+and G, then use naturality of G's comparison at the opposite of F's forward
 comparison. No preadditivity or scalar structure is needed. -/
 def compDualityPreservingFunctor {E : Type u} [Category.{v} E] [HermitianCategory E]
   (F : C ⥤ D)
@@ -206,20 +203,13 @@ def compDualityPreservingFunctor {E : Type u} [Category.{v} E] [HermitianCategor
     refine { toDualityComparison := hDC, coherence := ?_ }
     intro X
     -- Use the component formulas without unfolding the whiskering construction.
-    simp only [hDC, compDualityComparison_hom_app, compDualityComparison_inv_app,
+    simp only [hDC, compDualityComparison_hom_app,
       Functor.comp_map, Functor.comp_obj, Functor.op_obj, op_comp, Functor.map_comp]
-    -- Apply coherence first for F, then for G.
-    rw [hf.coherence, G.map_comp, G.map_comp, hg.coherence]
-    simp only [Category.assoc]
-    -- Move the dual of F's inverse comparison past G's comparison.
-    -- `naturality_assoc` includes the final postcomposition by G's image of
-    -- F's comparison at D_C(X), matching the right-associated goal.
-    have hn := hg.nat_iso.hom.naturality_assoc
-      (hf.nat_iso.inv.app (op X)).op
-      (G.map (hf.nat_iso.hom.app
-        (op ((HermitianCategory.duality (C := C)).obj (op X)))))
+    -- Naturality moves the dual of F's comparison past G's comparison.
+    have hn := hg.nat_iso.hom.naturality (hf.nat_iso.hom.app (op X)).op
     dsimp at hn
-    rw [← hn]
+    rw [← Category.assoc, hg.coherence, Category.assoc, ← hn,
+      ← Category.assoc, ← G.map_comp, hf.coherence, G.map_comp, Category.assoc]
 
 /-- The canonical identity comparison satisfies double-dual coherence.
 Its components are identities, so coherence reduces to preservation of identity
@@ -235,20 +225,20 @@ def IdIsDualityPreservingFunctor : DualityPreservingFunctor (Functor.id C) := by
 /-! ## Transport of sesquilinear forms along comparisons of dualities -/
 
 /-- Transport a sesquilinear form along a functor with a comparison of dualities.
-`F.map h` ends at F(D_C(M)), so the inverse comparison changes its target to
+`F.map h` ends at F(D_C(M)), so the forward comparison changes its target to
 D_D(F(M)). The component is evaluated at `op M` because the comparison is
 between functors on Cᵒᵖ. This construction itself does not use coherence. -/
 def mapSesqForms {M : C} (F : C ⥤ D)
  (hf : DualityComparison F) (h : Sesq M) : Sesq (F.obj M) :=
-  (F.map h) ≫ (hf.nat_iso.inv.app (op M))
+  (F.map h) ≫ (hf.nat_iso.hom.app (op M))
 
 /-- A faithful functor with a duality comparison transports forms injectively. -/
 lemma mapSesqForms_injective (functor : C ⥤ D) (hf : DualityComparison functor) [functor.Faithful]
     {M : C} : Function.Injective (mapSesqForms functor hf (M := M)) := by
   intro h k heq
-  -- Cancel the inverse comparison, then reflect equality through the faithful functor.
+  -- Cancel the forward comparison, then reflect equality through the faithful functor.
   apply functor.map_injective
-  exact (cancel_mono (hf.nat_iso.inv.app (op M))).mp heq
+  exact (cancel_mono (hf.nat_iso.hom.app (op M))).mp heq
 
 /-- Transport commutes with pullback of sesquilinear forms. -/
 lemma mapSesqForms_pullback (functor : C ⥤ D) (hf : DualityComparison functor)
@@ -256,7 +246,7 @@ lemma mapSesqForms_pullback (functor : C ⥤ D) (hf : DualityComparison functor)
     mapSesqForms functor hf (f ≫ h ≫ HermitianCategory.duality.map f.op) =
       functor.map f ≫ mapSesqForms functor hf h ≫
         HermitianCategory.duality.map (functor.map f).op := by
-  have hn := hf.nat_iso.inv.naturality f.op
+  have hn := hf.nat_iso.hom.naturality f.op
   dsimp at hn
   simp only [mapSesqForms, Functor.map_comp, Category.assoc]
   rw [hn]
@@ -280,7 +270,7 @@ def mapSesqFormsHom (M : C) (hf : DualityComparison functor) : Sesq M →+ Sesq 
 
 omit [Preadditive C] [Preadditive D] in
 /-- Transport preserves nonsingularity: the image of an isomorphism followed
-by an inverse comparison component is again an isomorphism. -/
+by a forward comparison component is again an isomorphism. -/
 lemma mapNonsingularSesqForm (M : C)
     (hf : DualityComparison functor)
     (h : Sesq M) (h_nonsing : isNonSingular h) :
@@ -288,5 +278,5 @@ lemma mapNonsingularSesqForm (M : C)
   -- Register the supplied proof so typeclass inference can use preservation
   -- of isomorphisms by functors and closure under composition.
   let _ : IsIso h := h_nonsing
-  change IsIso (functor.map h ≫ hf.nat_iso.inv.app (op M))
+  change IsIso (functor.map h ≫ hf.nat_iso.hom.app (op M))
   infer_instance

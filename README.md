@@ -17,14 +17,14 @@ The current formalization includes:
 - **Sesquilinear forms:** `Sesq M` is the morphism space $`M \to D(M)`$, with an abelian group structure when the category is preadditive.
 - **Adjoints and λ-Hermitian forms:** the adjoint operation `formDual` is involutive. For a norm-one unit $`\lambda`$, the condition is $`h^\dagger = \lambda \cdot h`$. Under the specified additivity and linearity assumptions, these forms constitute an additive subgroup; `StarLinearDuality` expresses conjugate-linearity of the duality.
 - **Nonsingular objects and isometries:** `HermitianObject` packages a λ-Hermitian form whose underlying morphism is an isomorphism. `HermitianFormCat` names the resulting category, with invertible form-preserving morphisms as its isometries. Inverse isometries give this category a `Groupoid` instance.
-- **Comparisons of dualities:** `DualityComparison` supplies a natural comparison isomorphism; `DualityPreservingFunctor` additionally requires ordinary double-dual coherence. `mapSesqForms` needs only the comparison, and `mapSesqFormsHom` packages transport as an additive homomorphism when the functor is additive.
+- **Comparisons of dualities:** `DualityComparison` supplies a natural comparison isomorphism with forward components $`F(D_C(M)) \to D_D(F(M))`$; `DualityPreservingFunctor` additionally requires ordinary double-dual coherence. `mapSesqForms` transports a form by composing `F.map h` with the forward comparison, without a coherence assumption. `mapSesqFormsHom` packages transport as an additive homomorphism when the functor is additive.
 - **Transport of Hermitian forms:** with the stated linearity assumptions and scalar-dependent compatibility `HermitianFunctor R functor hf eta`, `mapHermitianForms` sends λ-Hermitian forms to `(eta * lam)`-Hermitian forms. `mapHermitianFormsHom` gives the additive homomorphism, and `functorHermitianCategories` gives the induced functor on nonsingular Hermitian objects and isometries.
 - **Identity, composition, and equivalences:** transport respects identity and composition on forms, objects, and isometries; the induced functor laws hold after parameter casts. `functorHermitianCategoriesIsEquivalence` proves that a compatible linear equivalence induces an equivalence, bundled by `equivalenceHermitianCategories`.
-- **Scaling:** `scalingFunctorCat R s` equips the identity functor with comparison components `s • 𝟙`. Its induced `scalingHermitianCategories R s lam` scales forms by `s⁻¹`, changes their parameter to `(scalingParameter R s * lam)`, where `scalingParameter R s = s * star (s⁻¹)`, and leaves underlying isometry morphisms unchanged.
+- **Scaling:** `scalingFunctorCat R s` equips the identity functor with comparison components `s • 𝟙`. Its induced `scalingHermitianCategories R s lam` scales forms by `s`, changes their parameter to `(scalingParameter R s * lam)`, where `scalingParameter R s = star s * s⁻¹`, and leaves underlying isometry morphisms unchanged.
 - **Scaling composition and equivalence:** `scalingFunctorCompIso` identifies successive scalings by `s` and `t` with scaling by `t * s`, up to a natural isomorphism and the corresponding parameter cast. `scalingFunctorIsEquivalence` proves that every scaling functor is an equivalence; the proof specializes the general transport equivalence theorem to the identity functor with the scaling comparison.
 - **Tate cohomology:** additive and multiplicative cycle/boundary presentations in degrees zero and one. The multiplicative constructions use the unit group of the ring. A generalized half-unit $`r + r^* = 1`$ implies vanishing of both additive groups.
 
-In particular, writing $`\sigma(s) = s\,\overline{s^{-1}}`$, the scaling theorem gives
+In particular, writing $`\sigma(s) = \overline{s}\,s^{-1}`$, the scaling theorem gives
 
 $$
 \mathrm{Herm}_{\lambda}(\mathcal{C})
@@ -32,7 +32,7 @@ $$
 \mathrm{Herm}_{\sigma(s)\lambda}(\mathcal{C}).
 $$
 
-Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lambda\overline{\lambda}=1`$. The category $`\mathcal{C}`$ is $`R`$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The scaling functor sends a form $`h`$ to $`s^{-1}h`$. Scaling by the inverse unit, followed by the appropriate parameter cast, reverses this operation.
+Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lambda\overline{\lambda}=1`$. The category $`\mathcal{C}`$ is $`R`$-linear and preadditive, with additive, conjugate-linear duality (`StarLinearDuality`). The scaling functor sends a form $`h`$ to $`sh`$. Scaling by the inverse unit, followed by the appropriate parameter cast, reverses this operation.
 
 `HermitianFunctor` imposes scalar-dependent compatibility on a `DualityComparison`; ordinary coherence is not an additional prerequisite for this transport. To use an ordinary `DualityPreservingFunctor` with the transport constructions, pass its `.toDualityComparison` field.
 
@@ -94,7 +94,7 @@ The default build target imports all project modules through `HermitianCategorie
 
 ## Releases and License
 
-The current package version is **0.2.0**. See [CHANGELOG.md](CHANGELOG.md) for
+The current package version is **0.2.1**. See [CHANGELOG.md](CHANGELOG.md) for
 release notes and migration details.
 
 Copyright (c) 2026 Wojciech Politarczyk. Released under the
