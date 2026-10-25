@@ -102,6 +102,8 @@ jobs:
             sudo apt-get install --yes --no-install-recommends strace python3
           fi
           bash .github/scripts/collect-docs-diagnostics.sh before
+      - name: Enable memory overcommit for the diagnostic build
+        run: bash .github/scripts/docs-overcommit.sh enable
       - name: Start resource monitoring
         shell: bash
         run: |
@@ -116,6 +118,9 @@ jobs:
       - name: Capture final system limits and kernel messages
         if: always()
         run: bash .github/scripts/collect-docs-diagnostics.sh after
+      - name: Restore original memory overcommit policy
+        if: always()
+        run: bash .github/scripts/docs-overcommit.sh restore
       - name: Report runner resources
         if: always()
         shell: bash
@@ -134,6 +139,6 @@ jobs:
           name: docs-runner-diagnostics
           path: |
             ${{ runner.temp }}/docs-runner-diagnostics/*.log
-            ${{ runner.temp }}/docs-runner-diagnostics/build-exit-code.txt
+            ${{ runner.temp }}/docs-runner-diagnostics/*.txt
           if-no-files-found: warn
           retention-days: 7
