@@ -42,4 +42,82 @@ jobs:
           build: 'false'
           test: 'false'
           lint: 'false'
+      - name: Check disk space and add swap
+        run: bash .github/scripts/prepare-docs-runner.sh
+      - name: Start resource monitoring
+        shell: bash
+        run: |
+          diagnostics_dir="$RUNNER_TEMP/docs-runner-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          nohup bash .github/scripts/monitor-docs-runner.sh > "$diagnostics_dir/resource-usage.log" 2>&1 < /dev/null &
+          echo "$!" > "$diagnostics_dir/monitor.pid"
       - uses: leanprover-community/docgen-action@v1
+      - name: Report runner resources
+        if: always()
+        shell: bash
+        run: |
+          diagnostics_dir="$RUNNER_TEMP/docs-runner-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          if [[ -f "$diagnostics_dir/monitor.pid" ]]; then
+            kill "$(cat "$diagnostics_dir/monitor.pid")" 2>/dev/null || true
+          fi
+          bash .github/scripts/monitor-docs-runner.sh --once >> "$diagnostics_dir/resource-usage.log" 2>&1
+          cat "$diagnostics_dir/resource-usage.log"
+      - name: Upload runner diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-runner-diagnostics
+          path: ${{ runner.temp }}/docs-runner-diagnostics/resource-usage.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  documentation-diagnostics:
+    name: Diagnose documentation build (no deployment)
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare Lean and dependencies
+        uses: leanprover/lean-action@v1
+        with:
+          build: 'false'
+          test: 'false'
+          lint: 'false'
+      - name: Check disk space and add swap
+        run: bash .github/scripts/prepare-docs-runner.sh
+      - name: Start resource monitoring
+        shell: bash
+        run: |
+          diagnostics_dir="$RUNNER_TEMP/docs-runner-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          nohup bash .github/scripts/monitor-docs-runner.sh > "$diagnostics_dir/resource-usage.log" 2>&1 < /dev/null &
+          echo "$!" > "$diagnostics_dir/monitor.pid"
+      # docgen-action itself skips its API build on workflow_dispatch, so run
+      # the equivalent Lake build directly, without its deployment steps.
+      - name: Build API documentation with a cold docs cache
+        run: bash .github/scripts/build-docs-diagnostics.sh
+      - name: Report runner resources
+        if: always()
+        shell: bash
+        run: |
+          diagnostics_dir="$RUNNER_TEMP/docs-runner-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          if [[ -f "$diagnostics_dir/monitor.pid" ]]; then
+            kill "$(cat "$diagnostics_dir/monitor.pid")" 2>/dev/null || true
+          fi
+          bash .github/scripts/monitor-docs-runner.sh --once >> "$diagnostics_dir/resource-usage.log" 2>&1
+          cat "$diagnostics_dir/resource-usage.log"
+      - name: Upload runner diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-runner-diagnostics
+          path: ${{ runner.temp }}/docs-runner-diagnostics/resource-usage.log
+          if-no-files-found: warn
+          retention-days: 7
