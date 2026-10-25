@@ -80,6 +80,9 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    env:
+      DOCS_DIAGNOSTICS_DETAILED: 'true'
+      DOCS_MONITOR_INTERVAL_SECONDS: '5'
 
     steps:
       - uses: actions/checkout@v5
@@ -91,6 +94,14 @@ jobs:
           lint: 'false'
       - name: Check disk space and add swap
         run: bash .github/scripts/prepare-docs-runner.sh
+      - name: Prepare syscall tracing and capture system limits
+        shell: bash
+        run: |
+          if ! command -v strace > /dev/null || ! command -v python3 > /dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends strace python3
+          fi
+          bash .github/scripts/collect-docs-diagnostics.sh before
       - name: Start resource monitoring
         shell: bash
         run: |
@@ -102,6 +113,9 @@ jobs:
       # the equivalent Lake build directly, without its deployment steps.
       - name: Build API documentation with a cold docs cache
         run: bash .github/scripts/build-docs-diagnostics.sh
+      - name: Capture final system limits and kernel messages
+        if: always()
+        run: bash .github/scripts/collect-docs-diagnostics.sh after
       - name: Report runner resources
         if: always()
         shell: bash
@@ -118,6 +132,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docs-runner-diagnostics
-          path: ${{ runner.temp }}/docs-runner-diagnostics/resource-usage.log
+          path: |
+            ${{ runner.temp }}/docs-runner-diagnostics/*.log
+            ${{ runner.temp }}/docs-runner-diagnostics/build-exit-code.txt
           if-no-files-found: warn
           retention-days: 7

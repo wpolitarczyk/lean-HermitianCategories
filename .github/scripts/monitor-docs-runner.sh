@@ -6,15 +6,15 @@ snapshot() {
   free -m
   swapon --show
   df -h "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
-  echo 'Largest processes by resident memory (RSS in KiB)'
+  echo 'Largest processes by resident memory (RSS and VSZ in KiB; NLWP = threads)'
   # Use process names rather than command lines to avoid logging arguments.
-  ps -eo pid,ppid,comm,rss,%mem,%cpu --sort=-rss | sed -n '1,16p'
-  for metric in memory.current memory.peak memory.max memory.events; do
-    if [[ -r "/sys/fs/cgroup/$metric" ]]; then
-      echo "cgroup $metric"
-      cat "/sys/fs/cgroup/$metric"
-    fi
-  done
+  ps -eo pid,ppid,comm,rss,vsz,nlwp,%mem,%cpu --sort=-rss | sed -n '1,16p'
+  if [[ "${DOCS_DIAGNOSTICS_DETAILED:-false}" == 'true' ]]; then
+    echo 'System memory commitments and pressure'
+    grep -E '^(MemAvailable|SwapTotal|SwapFree|CommitLimit|Committed_AS|PageTables|Slab):' /proc/meminfo || true
+    cat /proc/pressure/memory 2>/dev/null || true
+    python3 "$(dirname "${BASH_SOURCE[0]}")/docs-process-resources.py" || echo 'Process snapshot failed; continuing monitoring.'
+  fi
 }
 
 if [[ "${1:-}" == '--once' ]]; then
@@ -22,6 +22,6 @@ if [[ "${1:-}" == '--once' ]]; then
 else
   while true; do
     snapshot
-    sleep 30
+    sleep "${DOCS_MONITOR_INTERVAL_SECONDS:-30}"
   done
 fi
