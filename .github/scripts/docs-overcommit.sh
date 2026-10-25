@@ -33,7 +33,7 @@ if [[ "$mode" == enable ]]; then
   original=$(cat "$original_file")
   validate_policy "$original"
   target=1
-  log "Original vm.overcommit_memory=$original; enabling diagnostic policy $target"
+  log "Original vm.overcommit_memory=$original; enabling documentation policy $target"
 else
   if [[ ! -f "$original_file" ]]; then
     log 'No saved overcommit policy; setup did not change it. Nothing to restore.'

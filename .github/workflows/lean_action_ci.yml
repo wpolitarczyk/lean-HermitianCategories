@@ -44,6 +44,10 @@ jobs:
           lint: 'false'
       - name: Check disk space and add swap
         run: bash .github/scripts/prepare-docs-runner.sh
+      # Lake forks Git subprocesses while reserving a large virtual address
+      # space. Allow overcommit even when the heuristic would reject the fork.
+      - name: Enable memory overcommit for documentation
+        run: bash .github/scripts/docs-overcommit.sh enable
       - name: Start resource monitoring
         shell: bash
         run: |
@@ -52,6 +56,9 @@ jobs:
           nohup bash .github/scripts/monitor-docs-runner.sh > "$diagnostics_dir/resource-usage.log" 2>&1 < /dev/null &
           echo "$!" > "$diagnostics_dir/monitor.pid"
       - uses: leanprover-community/docgen-action@v1
+      - name: Restore original memory overcommit policy
+        if: always()
+        run: bash .github/scripts/docs-overcommit.sh restore
       - name: Report runner resources
         if: always()
         shell: bash
@@ -68,7 +75,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docs-runner-diagnostics
-          path: ${{ runner.temp }}/docs-runner-diagnostics/resource-usage.log
+          path: |
+            ${{ runner.temp }}/docs-runner-diagnostics/resource-usage.log
+            ${{ runner.temp }}/docs-runner-diagnostics/overcommit.log
+            ${{ runner.temp }}/docs-runner-diagnostics/overcommit-original.txt
           if-no-files-found: warn
           retention-days: 7
 

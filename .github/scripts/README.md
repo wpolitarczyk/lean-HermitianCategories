@@ -4,13 +4,17 @@ After pushing the diagnosis branch, manually run **Lean Action CI** on that
 branch. The **Diagnose documentation build (no deployment)** job builds the
 documentation with a cold docs cache and does not publish to GitHub Pages.
 
-The manual job tests `vm.overcommit_memory=1` to avoid the heuristic rejection
-of Lake's large virtual-memory commitment when forking Git subprocesses. It
-saves the original setting, verifies the change, and attempts to restore it
-after the build even if the build fails. Swap and tracing remain enabled.
-The production job does not change its overcommit policy.
+Both the production and manual jobs set `vm.overcommit_memory=1` to avoid the
+heuristic rejection of Lake's large virtual-memory commitment when forking Git
+subprocesses. Each job saves the original setting, verifies the change, and
+attempts to restore it after docgen finishes even if it fails. Swap remains
+enabled in both jobs; syscall tracing is used only in the manual job.
 
-Download the `docs-runner-diagnostics` artifact after the run. It contains:
+The production job builds and deploys on pushes to `master`. Its
+`docs-runner-diagnostics` artifact contains the lightweight 30-second resource
+samples, `overcommit.log`, and `overcommit-original.txt`.
+
+The manual job's `docs-runner-diagnostics` artifact contains:
 
 - `build.log` and `build-exit-code.txt`: docgen/Lake output and its exit status.
 - `syscall-failures.log`: failed process, memory, pipe, and descriptor-duplication
