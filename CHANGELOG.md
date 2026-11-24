@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 — 2026-11-24
+
+### Additions
+
+- Add `HermitianCategories/QuadraticForms.lean` formalizing Bak's form
+  parameters (`LambdaMin`, `LambdaMax`, `FormParameter` with `BoundedOrder` and
+  `Lattice` instances, half-unit uniqueness), `(λ, Λ)`-quadratic forms
+  (`QuadraticForm`, `pullbackQuadraticForm`, `smulQuadraticForm`,
+  `associatedHermitian`), the groupoid `QuadraticFormCat`, parameter-change
+  functors `mapQuadraticFunctorOfLe`, and `symmetrizationFunctor` (faithful,
+  full for `maxParam`, and an equivalence when `R` admits a generalized
+  half-unit or `TateCohomologyZeroAdd R` vanishes).
+- Add `HermitianCategories/QuadraticFunctors.lean` formalizing transport of
+  `LambdaMin`, `LambdaMax`, and `FormParameter` along `HermitianFunctor`
+  (`λ ↦ η⁻¹ * λ`), induced functors `functorQuadraticCategories`,
+  equivalences (`equivalenceQuadraticCategories`), and scaling
+  (`scalingFormParameter`, `scalingQuadraticCategories`,
+  `scalingQuadraticIsEquivalence`).
+- Re-export `QuadraticForms` and `QuadraticFunctors` from
+  `HermitianCategories.lean`.
+
 ## 0.2.1 — 2026-10-24
 
 ### Changes

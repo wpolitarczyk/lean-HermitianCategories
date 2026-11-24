@@ -44,7 +44,9 @@ Here $`R`$ is a commutative ring with involution, $`s \in R^\times`$, and $`\lam
 | [TateCohomology.lean](HermitianCategories/TateCohomology.lean) | Cycles, boundaries, quotient groups, generalized half-units, and the norm-one unit subgroup `Z1Mul`. |
 | [HermitianForms.lean](HermitianCategories/HermitianForms.lean) | Adjoints, λ-Hermitian forms, nonsingular objects, inverse isometries, and their groupoid structure. Imports `Basic` and `TateCohomology`. |
 | [HermitianFunctors.lean](HermitianCategories/HermitianFunctors.lean) | Hermitian functors, transport and its identity/composition laws, parameter casts, induced equivalences, and scaling. Imports `HermitianForms`. |
-| [HermitianCategories.lean](HermitianCategories.lean) | Library entry point importing all four modules. |
+| [QuadraticForms.lean](HermitianCategories/QuadraticForms.lean) | Form parameters (`LambdaMin`, `LambdaMax`, `FormParameter`), `(λ, Λ)`-quadratic forms, groupoid `QuadraticFormCat`, and `symmetrizationFunctor`. Imports `Basic`, `TateCohomology`, and `HermitianForms`. |
+| [QuadraticFunctors.lean](HermitianCategories/QuadraticFunctors.lean) | Transport of form parameters and quadratic forms along Hermitian functors, induced equivalences, and scaling. Imports `QuadraticForms` and `HermitianFunctors`. |
+| [HermitianCategories.lean](HermitianCategories.lean) | Library entry point importing all six modules. |
 
 To use the full library:
 
@@ -62,7 +64,6 @@ This milestone treats abstract categories with duality. The following extensions
 
 - **Finitely generated projective modules:** construct the Hermitian structure from $`P \mapsto Hom_R(P,R)`$, with the scalar action adjusted for the ring involution, and prove the double-dual isomorphism and coherence.
 - **Finite abelian groups:** construct the Hermitian structure from Pontryagin duality, for example $`A \mapsto Hom(A,\mathbb{Q}/\mathbb{Z})`$, and prove the double-dual isomorphism and coherence.
-- **Quadratic forms:** extend the project with a formalization of quadratic forms in Hermitian categories.
 
 ## Development Environment
 
@@ -94,7 +95,7 @@ The default build target imports all project modules through `HermitianCategorie
 
 ## Releases and License
 
-The current package version is **0.2.1**. See [CHANGELOG.md](CHANGELOG.md) for
+The current package version is **0.3.0**. See [CHANGELOG.md](CHANGELOG.md) for
 release notes and migration details.
 
 Copyright (c) 2026 Wojciech Politarczyk. Released under the
