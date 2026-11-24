@@ -3,6 +3,7 @@ import HermitianCategories.HermitianForms
 import HermitianCategories.HermitianFunctors
 import HermitianCategories.TateCohomology
 import HermitianCategories.QuadraticForms
+import HermitianCategories.QuadraticFunctors
 
 /-!
 # HermitianCategories library entry point
