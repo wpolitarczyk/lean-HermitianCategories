@@ -176,6 +176,8 @@ by self-adjoint scalars. These form parameters form a bounded lattice under
 pointwise inclusion, and collapse to a single element whenever `R` admits a
 generalized half-unit (or equivalently, when `TateCohomologyZeroAdd R` vanishes). -/
 
+section FormParameters
+
 variable (lam : Z1Mul R)
 
 /-- A form parameter for `λ`-quadratic forms assigns to each object `M : C` an
@@ -349,3 +351,414 @@ lemma subsingleton_of_tateCohomologyZeroAddVanishes [StarLinearDuality R C]
   subsingleton_of_halfUnit R lam (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero)
 
 end FormParameter
+
+end FormParameters
+
+/-! ## (λ, Λ)-quadratic forms
+
+Given a form parameter `Λ`, a `(λ, Λ)`-quadratic form on `M : C` is a class
+in the quotient `Sesq M ⧸ Λ.func M`. Pullback along morphisms descends to this
+quotient, and the twisted symmetrization `q ↦ star λ • q + q†` descends to an
+additive map `associatedHermitian` into `λ`-Hermitian forms. Nonsingular
+`(λ, Λ)`-quadratic objects and their isometries form a groupoid
+`QuadraticFormCat R Λ`, and symmetrization induces a functor to
+`HermitianFormCat R lam` that is an equivalence whenever `R` has a generalized
+half-unit. -/
+
+section QuadraticForms
+
+variable {lam : Z1Mul R} (Λ : FormParameter (C := C) R lam)
+
+/-- A `(λ, Λ)`-quadratic form on `M : C` is an element of the quotient `Sesq M ⧸ Λ.func M`. -/
+abbrev QuadraticForm (M : C) (Λ : FormParameter (C := C) R lam) : Type v :=
+  Sesq M ⧸ Λ.func M
+
+/-- The quotient map sending a sesquilinear form to its `(λ, Λ)`-quadratic form class. -/
+def toQuadraticForm (M : C) : Sesq M →+ QuadraticForm R M Λ :=
+  QuotientAddGroup.mk' (Λ.func M)
+
+/-- Pullback of sesquilinear forms along `f : M ⟶ N` as an additive homomorphism.
+Additivity follows from preadditivity of composition in `C`. -/
+def pullbackSesqHom {M N : C} (f : M ⟶ N) : Sesq N →+ Sesq M where
+  toFun h := f ≫ h ≫ HermitianCategory.duality.map f.op
+  map_zero' := by simp
+  map_add' g h := by simp [Preadditive.add_comp, Preadditive.comp_add]
+
+omit [Functor.Additive (HermitianCategory.duality (C := C))] in
+/-- Unfold the action of `pullbackSesqHom` on a sesquilinear form. -/
+@[simp]
+lemma pullbackSesqHom_apply {M N : C} (f : M ⟶ N) (h : Sesq N) :
+    pullbackSesqHom f h = f ≫ h ≫ HermitianCategory.duality.map f.op := rfl
+
+/-- Pullback of `(λ, Λ)`-quadratic forms along `f : M ⟶ N`, induced on the quotient by `Λ.pullback`. -/
+def pullbackQuadraticForm {M N : C} (f : M ⟶ N) :
+    QuadraticForm R N Λ →+ QuadraticForm R M Λ :=
+  QuotientAddGroup.lift (Λ.func N) ((toQuadraticForm R Λ M).comp (pullbackSesqHom f)) (by
+    -- Any `h ∈ Λ.func N` pulls back into `Λ.func M`, so its quotient class is `0`.
+    intro h hh
+    change toQuadraticForm R Λ M (pullbackSesqHom f h) = 0
+    rw [toQuadraticForm, QuotientAddGroup.mk'_apply, QuotientAddGroup.eq_zero_iff]
+    exact Λ.pullback hh f)
+
+/-- Pullback of a represented `(λ, Λ)`-quadratic form acts on its underlying sesquilinear representative. -/
+@[simp]
+lemma pullbackQuadraticForm_mk {M N : C} (f : M ⟶ N) (h : Sesq N) :
+    pullbackQuadraticForm R Λ f (toQuadraticForm R Λ N h) =
+      toQuadraticForm R Λ M (f ≫ h ≫ HermitianCategory.duality.map f.op) := rfl
+
+/-- Pulling back a `(λ, Λ)`-quadratic form along the identity morphism is the identity.
+Proof by induction on a sesquilinear representative and functoriality of `duality`. -/
+lemma pullbackQuadraticForm_id (M : C) (q : QuadraticForm R M Λ) :
+    pullbackQuadraticForm R Λ (𝟙 M) q = q := by
+  refine QuotientAddGroup.induction_on q ?_
+  intro h
+  change toQuadraticForm R Λ M
+      ((𝟙 M) ≫ h ≫ HermitianCategory.duality.map (𝟙 M).op) =
+    toQuadraticForm R Λ M h
+  simp
+
+/-- Pulling back a `(λ, Λ)`-quadratic form along `f ≫ g` is the iterated pullback along `g` then `f`.
+Proof by induction on a representative and contravariance of `duality`. -/
+lemma pullbackQuadraticForm_comp {M N P : C} (f : M ⟶ N) (g : N ⟶ P)
+    (q : QuadraticForm R P Λ) :
+    pullbackQuadraticForm R Λ (f ≫ g) q =
+      pullbackQuadraticForm R Λ f (pullbackQuadraticForm R Λ g q) := by
+  refine QuotientAddGroup.induction_on q ?_
+  intro h
+  change toQuadraticForm R Λ M
+      ((f ≫ g) ≫ h ≫ HermitianCategory.duality.map (f ≫ g).op) =
+    toQuadraticForm R Λ M
+      (f ≫ (g ≫ h ≫ HermitianCategory.duality.map g.op) ≫
+        HermitianCategory.duality.map f.op)
+  -- Contravariant functoriality reverses `(f ≫ g).op` into `g.op ≫ f.op`.
+  rw [op_comp, Functor.map_comp]
+  simp only [Category.assoc]
+
+/-- Underlying sesquilinear symmetrization `q ↦ star λ • q + q†`, which lands in `λ`-Hermitian forms. -/
+def symmetrizeSesqHom [StarLinearDuality R C] (M : C) : Sesq M →+ Sesq M :=
+  (star ((lam : Rˣ) : R)) • AddMonoidHom.id (Sesq M) + formDualHom M
+
+/-- Unfold the action of `symmetrizeSesqHom` on a sesquilinear form. -/
+@[simp]
+lemma symmetrizeSesqHom_apply [StarLinearDuality R C] (M : C) (q : Sesq M) :
+    symmetrizeSesqHom R M (lam := lam) q = star ((lam : Rˣ) : R) • q + formDual q := rfl
+
+/-- The symmetrization `star λ • q + q†` is always `λ`-Hermitian.
+Applying `formDual` uses conjugate-linearity and `λ * star λ = 1` to recover `λ • (star λ • q + q†)`. -/
+lemma symmetrizeSesqHom_isLambdaHermitian [StarLinearDuality R C]
+    (M : C) (q : Sesq M) :
+    IsLambdaHermitian R lam (symmetrizeSesqHom R M (lam := lam) q) := by
+  rw [IsLambdaHermitian, symmetrizeSesqHom_apply, formDual_add,
+    formDual_smul, formDoubleDual, star_star]
+  have hscalar :
+      ((lam : Rˣ) : R) * star ((lam : Rˣ) : R) = 1 := by
+    exact congrArg (fun x : Rˣ => (x : R))
+      ((mem_Z1Mul R (lam : Rˣ)).mp lam.property)
+  -- Distribute `λ` over `q† + λ⁻¹ • q` using `λ * star λ = 1`.
+  rw [smul_add, smul_smul, hscalar, one_smul, add_comm]
+
+/-- Symmetrization of sesquilinear forms as a homomorphism into `LambdaHermitianForms R M lam`. -/
+def symmetrizeToHermitian [StarLinearDuality R C] (M : C) :
+    Sesq M →+ LambdaHermitianForms R M lam where
+  toFun q := ⟨symmetrizeSesqHom R M (lam := lam) q, symmetrizeSesqHom_isLambdaHermitian R M (lam := lam) q⟩
+  map_zero' := by ext; simp
+  map_add' g h := by ext; simp [add_add_add_comm]
+
+/-- Any form in `Λ.func M` lies in `LambdaMax R M lam`, so its symmetrization vanishes.
+Scaling `q + λ • q† = 0` by `star λ` yields `star λ • q + q† = 0`. -/
+lemma symmetrizeToHermitian_eq_zero_of_mem [StarLinearDuality R C]
+    {M : C} {q : Sesq M} (hq : q ∈ Λ.func M) :
+    symmetrizeToHermitian R M (lam := lam) q = 0 := by
+  apply Subtype.ext
+  change star ((lam : Rˣ) : R) • q + formDual q = 0
+  have hmax := Λ.supLambdaMax M hq
+  rw [mem_LambdaMax] at hmax
+  have hscalar :
+      star ((lam : Rˣ) : R) * ((lam : Rˣ) : R) = 1 := by
+    rw [mul_comm]
+    exact congrArg (fun x : Rˣ => (x : R))
+      ((mem_Z1Mul R (lam : Rˣ)).mp lam.property)
+  -- Multiply `q + λ • q† = 0` on the left by `star λ`.
+  have ht :=
+    congrArg (fun h : Sesq M => star ((lam : Rˣ) : R) • h) hmax
+  simpa [smul_add, smul_smul, hscalar] using ht
+
+/-- The associated `λ`-Hermitian form of a `(λ, Λ)`-quadratic form,
+obtained by descending `symmetrizeToHermitian` to the quotient `Sesq M ⧸ Λ.func M`. -/
+def associatedHermitian [StarLinearDuality R C] (M : C) :
+    QuadraticForm R M Λ →+ LambdaHermitianForms R M lam :=
+  QuotientAddGroup.lift (Λ.func M) (symmetrizeToHermitian R M (lam := lam))
+    (fun _ hq => symmetrizeToHermitian_eq_zero_of_mem R Λ hq)
+
+/-- Unfold `associatedHermitian` on a represented `(λ, Λ)`-quadratic form. -/
+@[simp]
+lemma associatedHermitian_mk [StarLinearDuality R C] (M : C) (q : Sesq M) :
+    (associatedHermitian R Λ M (toQuadraticForm R Λ M q)).val =
+      star ((lam : Rˣ) : R) • q + formDual q := rfl
+
+/-- `associatedHermitian` commutes with pullback along any morphism `f : M ⟶ N`.
+Proof by induction on a representative, `formDual_pullback`, and `R`-linearity of composition. -/
+lemma associatedHermitian_pullback [StarLinearDuality R C] {M N : C} (f : M ⟶ N)
+    (q : QuadraticForm R N Λ) :
+    (associatedHermitian R Λ M (pullbackQuadraticForm R Λ f q)).val =
+      f ≫ (associatedHermitian R Λ N q).val ≫ HermitianCategory.duality.map f.op := by
+  refine QuotientAddGroup.induction_on q ?_
+  intro h
+  change star ((lam : Rˣ) : R) •
+      (f ≫ h ≫ HermitianCategory.duality.map f.op) +
+      formDual (f ≫ h ≫ HermitianCategory.duality.map f.op) =
+    f ≫ (star ((lam : Rˣ) : R) • h + formDual h) ≫
+      HermitianCategory.duality.map f.op
+  rw [formDual_pullback]
+  simp only [Linear.comp_smul, Linear.smul_comp,
+    Preadditive.comp_add, Preadditive.add_comp]
+
+/-- A `(λ, Λ)`-quadratic form is nonsingular when its associated `λ`-Hermitian form is an isomorphism. -/
+abbrev isNonSingularQuadraticForm [StarLinearDuality R C] {M : C}
+    (q : QuadraticForm R M Λ) : Prop :=
+  isNonSingular (associatedHermitian R Λ M q).val
+
+/-- An isometry of `(λ, Λ)`-quadratic forms is an isomorphism pulling back the target form to the source form. -/
+def isIsometryQuadraticForms {M N : C}
+    (qM : QuadraticForm R M Λ) (qN : QuadraticForm R N Λ) (f : M ⟶ N) : Prop :=
+  IsIso f ∧ pullbackQuadraticForm R Λ f qN = qM
+
+/-- The type of isometries between two `(λ, Λ)`-quadratic forms. -/
+def QuadraticIsometry {M N : C}
+    (qM : QuadraticForm R M Λ) (qN : QuadraticForm R N Λ) : Type v :=
+  { f : M ⟶ N // isIsometryQuadraticForms R Λ qM qN f }
+
+/-- The identity morphism is an isometry of any `(λ, Λ)`-quadratic form. -/
+@[simp]
+lemma idIsQuadraticIsometry {M : C} (qM : QuadraticForm R M Λ) :
+    isIsometryQuadraticForms R Λ qM qM (𝟙 M) :=
+  ⟨inferInstance, pullbackQuadraticForm_id R Λ M qM⟩
+
+/-- Composition of quadratic isometries is a quadratic isometry, by functoriality of pullback. -/
+lemma compIsQuadraticIsometry {M N P : C}
+    {qM : QuadraticForm R M Λ} {qN : QuadraticForm R N Λ} {qP : QuadraticForm R P Λ}
+    {f : M ⟶ N} {g : N ⟶ P}
+    (hf : isIsometryQuadraticForms R Λ qM qN f)
+    (hg : isIsometryQuadraticForms R Λ qN qP g) :
+    isIsometryQuadraticForms R Λ qM qP (f ≫ g) := by
+  letI : IsIso f := hf.1
+  letI : IsIso g := hg.1
+  refine ⟨inferInstance, ?_⟩
+  -- Pull back `qP` along `g`, then along `f`.
+  rw [pullbackQuadraticForm_comp, hg.2, hf.2]
+
+/-- The inverse of a quadratic isometry is a quadratic isometry. -/
+lemma invIsQuadraticIsometry {M N : C}
+    {qM : QuadraticForm R M Λ} {qN : QuadraticForm R N Λ}
+    (f : M ⟶ N) (hf : isIsometryQuadraticForms R Λ qM qN f) :
+    letI : IsIso f := hf.1
+    isIsometryQuadraticForms R Λ qN qM (inv f) := by
+  letI : IsIso f := hf.1
+  refine ⟨inferInstance, ?_⟩
+  -- Substitute `qM = pullback f qN` and cancel `inv f ≫ f = 𝟙 N`.
+  calc
+    pullbackQuadraticForm R Λ (inv f) qM =
+        pullbackQuadraticForm R Λ (inv f)
+          (pullbackQuadraticForm R Λ f qN) := by
+      rw [hf.2]
+    _ = pullbackQuadraticForm R Λ (inv f ≫ f) qN := by
+      rw [pullbackQuadraticForm_comp]
+    _ = qN := by
+      rw [IsIso.inv_hom_id, pullbackQuadraticForm_id]
+
+/-- Construct the inverse `QuadraticIsometry` from a given `QuadraticIsometry`. -/
+noncomputable def inverseIsQuadraticIsometry {M N : C}
+    {qM : QuadraticForm R M Λ} {qN : QuadraticForm R N Λ}
+    (f : QuadraticIsometry R Λ qM qN) :
+    QuadraticIsometry R Λ qN qM := by
+  letI : IsIso f.val := f.property.1
+  exact ⟨inv f.val, invIsQuadraticIsometry R Λ f.val f.property⟩
+
+/-- A nonsingular `(λ, Λ)`-quadratic object consists of a base object `M`,
+a `(λ, Λ)`-quadratic form, and nonsingularity of its associated `λ`-Hermitian form. -/
+structure QuadraticObject [StarLinearDuality R C] (Λ : FormParameter (C := C) R lam) where
+  /-- The underlying object in `C`. -/
+  M : C
+  /-- The `(λ, Λ)`-quadratic form on `M`. -/
+  form : QuadraticForm R M Λ
+  /-- Invertibility of the associated `λ`-Hermitian form morphism. -/
+  nonsingular : isNonSingularQuadraticForm R Λ form
+
+/-- The category of nonsingular `(λ, Λ)`-quadratic objects and their isometries. -/
+instance [StarLinearDuality R C] : Category (QuadraticObject (C := C) R Λ) where
+  Hom X Y := QuadraticIsometry R Λ X.form Y.form
+  id X := ⟨𝟙 X.M, idIsQuadraticIsometry R Λ X.form⟩
+  comp {X Y Z} f g := ⟨f.val ≫ g.val, compIsQuadraticIsometry R Λ f.property g.property⟩
+
+/-- A name for the category of nonsingular `(λ, Λ)`-quadratic forms. -/
+abbrev QuadraticFormCat [StarLinearDuality R C] (Λ : FormParameter (C := C) R lam) : Type _ :=
+  QuadraticObject (C := C) R Λ
+
+/-- Every morphism in `QuadraticObject R Λ` is an isomorphism, with inverse `inverseIsQuadraticIsometry`. -/
+instance [StarLinearDuality R C] {X Y : QuadraticObject (C := C) R Λ} (f : X ⟶ Y) :
+    IsIso f := by
+  letI : IsIso f.val := f.property.1
+  let g := inverseIsQuadraticIsometry R Λ f
+  use g
+  constructor
+  · apply Subtype.ext
+    change f.val ≫ inv f.val = 𝟙 X.M
+    exact IsIso.hom_inv_id f.val
+  · apply Subtype.ext
+    change inv f.val ≫ f.val = 𝟙 Y.M
+    exact IsIso.inv_hom_id f.val
+
+/-- `QuadraticFormCat R Λ` is a groupoid since all its morphisms (isometries) are invertible. -/
+noncomputable instance [StarLinearDuality R C] :
+    Groupoid (QuadraticFormCat (C := C) R Λ) := by
+  apply Groupoid.ofIsIso
+  intro X Y f
+  infer_instance
+
+/-- The symmetrization functor from `(λ, Λ)`-quadratic forms to `λ`-Hermitian forms.
+It sends a quadratic object `(M, q)` to `(M, associatedHermitian q)` and preserves underlying morphisms. -/
+def symmetrizationFunctor [StarLinearDuality R C] :
+    QuadraticFormCat (C := C) R Λ ⥤ HermitianFormCat (C := C) R lam where
+  obj X :=
+    { M := X.M
+      form := associatedHermitian R Λ X.M X.form
+      nonsingular := X.nonsingular }
+  map {X Y} f := ⟨f.val, f.property.1, by
+    -- Apply `associatedHermitian` to `pullbackQuadraticForm f Y.form = X.form`.
+    have h := congrArg (fun q => (associatedHermitian R Λ X.M q).val) f.property.2
+    rw [associatedHermitian_pullback] at h
+    exact h⟩
+  map_id X := rfl
+  map_comp f g := rfl
+
+/-- When `R` has a generalized half-unit, `associatedHermitian` is bijective on every object `M`.
+Injectivity follows from `LambdaMin = LambdaMax`; surjectivity lifts `h` to `λ • (r • h)`. -/
+lemma associatedHermitian_bijective_of_halfUnit [StarLinearDuality R C]
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) (M : C) :
+    Function.Bijective (associatedHermitian R Λ M) := by
+  obtain ⟨r, hr⟩ := hhalf
+  have hnorm :
+      ((lam : Rˣ) : R) * star ((lam : Rˣ) : R) = 1 := by
+    exact congrArg (fun x : Rˣ => (x : R))
+      ((mem_Z1Mul R (lam : Rˣ)).mp lam.property)
+  have hnorm' :
+      star ((lam : Rˣ) : R) * ((lam : Rˣ) : R) = 1 := by
+    rw [mul_comm]
+    exact hnorm
+  constructor
+  · -- Injectivity: show the kernel of `associatedHermitian` is trivial.
+    intro x y hxy
+    apply sub_eq_zero.mp
+    have hker : ∀ q : QuadraticForm R M Λ,
+        associatedHermitian R Λ M q = 0 → q = 0 := by
+      intro q
+      refine QuotientAddGroup.induction_on q ?_
+      intro a ha
+      change toQuadraticForm R Λ M a = 0
+      rw [toQuadraticForm, QuotientAddGroup.mk'_apply,
+        QuotientAddGroup.eq_zero_iff]
+      -- `a` satisfies `star λ • a + a† = 0`, so `a ∈ LambdaMax = LambdaMin ≤ Λ.func M`.
+      apply Λ.subLambdaMin M
+      rw [LambdaMin_eq_LambdaMax_of_halfUnit R M lam ⟨r, hr⟩,
+        mem_LambdaMax]
+      have ha' := congrArg Subtype.val ha
+      change star ((lam : Rˣ) : R) • a + formDual a = 0 at ha'
+      have ht :=
+        congrArg (fun k : Sesq M => ((lam : Rˣ) : R) • k) ha'
+      simpa [smul_add, smul_smul, hnorm] using ht
+    apply hker (x - y)
+    rw [map_sub, hxy, sub_self]
+  · -- Surjectivity: `λ • (r • h)` symmetrizes to `(r + star r) • h = h`.
+    intro h
+    refine ⟨toQuadraticForm R Λ M
+      (((lam : Rˣ) : R) • (r • h.val)), ?_⟩
+    apply Subtype.ext
+    change star ((lam : Rˣ) : R) •
+        (((lam : Rˣ) : R) • (r • h.val)) +
+        formDual (((lam : Rˣ) : R) • (r • h.val)) = h.val
+    rw [formDual_smul, formDual_smul, h.property]
+    simp only [smul_smul]
+    have hcoeff1 :
+        star ((lam : Rˣ) : R) * (((lam : Rˣ) : R) * r) = r := by
+      rw [← mul_assoc, hnorm', one_mul]
+    have hcoeff2 :
+        star ((lam : Rˣ) : R) *
+          (star r * ((lam : Rˣ) : R)) = star r := by
+      rw [mul_comm (star r) ((lam : Rˣ) : R), ← mul_assoc,
+        hnorm', one_mul]
+    rw [hcoeff1, hcoeff2, ← add_smul, hr, one_smul]
+
+/-- When `R` has a generalized half-unit, `symmetrizationFunctor` is an equivalence of categories.
+Faithfulness is immediate on underlying morphisms; fullness and essential surjectivity follow from
+bijectivity of `associatedHermitian`. -/
+lemma symmetrizationFunctor_isEquivalence_of_halfUnit [StarLinearDuality R C]
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) :
+    (symmetrizationFunctor R Λ).IsEquivalence := by
+  let hbij (M : C) :=
+    associatedHermitian_bijective_of_halfUnit R Λ hhalf M
+  refine {
+    faithful := {
+      map_injective := by
+        -- Isometries are determined by their underlying morphism in `C`.
+        intro X Y f g h
+        apply Subtype.ext
+        exact congrArg
+          (fun k : (symmetrizationFunctor R Λ).obj X ⟶
+            (symmetrizationFunctor R Λ).obj Y => k.val) h }
+    full := {
+      map_surjective := by
+        -- Any Hermitian isometry preserves `associatedHermitian`, hence preserves the quadratic form by injectivity.
+        intro X Y f
+        let g : X.M ⟶ Y.M := f.val
+        have hfp :
+            g ≫ (associatedHermitian R Λ Y.M Y.form).val ≫
+                HermitianCategory.duality.map g.op =
+              (associatedHermitian R Λ X.M X.form).val :=
+          f.property.2
+        have hp : pullbackQuadraticForm R Λ g Y.form = X.form := by
+          apply (hbij X.M).1
+          apply Subtype.ext
+          rw [associatedHermitian_pullback]
+          exact hfp
+        refine ⟨⟨g, f.property.1, hp⟩, ?_⟩
+        apply Subtype.ext
+        rfl }
+    essSurj := {
+      mem_essImage := by
+        -- Lift `Y.form` via surjectivity of `associatedHermitian` and exhibit an isomorphism via `𝟙 Y.M`.
+        intro Y
+        obtain ⟨q, hq⟩ := (hbij Y.M).2 Y.form
+        let X : QuadraticObject (C := C) R Λ :=
+          { M := Y.M
+            form := q
+            nonsingular := by
+              change IsIso (associatedHermitian R Λ Y.M q).val
+              rw [hq]
+              exact Y.nonsingular }
+        refine ⟨X, ?_⟩
+        dsimp [X]
+        refine ⟨{
+          hom := ⟨𝟙 Y.M, by
+            constructor
+            · exact IsIso.id Y.M
+            · change (𝟙 Y.M) ≫ Y.form.val ≫
+                  HermitianCategory.duality.map (𝟙 Y.M).op =
+                (associatedHermitian R Λ Y.M q).val
+              simpa using congrArg Subtype.val hq.symm⟩
+          inv := ⟨𝟙 Y.M, by
+            constructor
+            · exact IsIso.id Y.M
+            · change (𝟙 Y.M) ≫
+                  (associatedHermitian R Λ Y.M q).val ≫
+                  HermitianCategory.duality.map (𝟙 Y.M).op = Y.form.val
+              simpa using congrArg Subtype.val hq⟩
+          hom_inv_id := by
+            apply Subtype.ext
+            change (𝟙 Y.M) ≫ (𝟙 Y.M) = 𝟙 Y.M
+            simp
+          inv_hom_id := by
+            apply Subtype.ext
+            change (𝟙 Y.M) ≫ (𝟙 Y.M) = 𝟙 Y.M
+            simp }⟩ } }
+
+end QuadraticForms
