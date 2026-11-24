@@ -20,7 +20,25 @@ import HermitianCategories.Basic
 import HermitianCategories.TateCohomology
 import HermitianCategories.HermitianForms
 
-/-! # The category of Λ-quadratic forms -/
+/-! # The category of (λ, Λ)-quadratic forms
+
+This module formalizes Bak's form parameters and `(λ, Λ)`-quadratic forms in an
+`R`-linear preadditive Hermitian category `C`:
+
+- `LambdaMin` and `LambdaMax` are defined via the twisted adjoint `q ↦ λ • q†`
+  as the boundary and cycle subgroups of `AdditiveTate`, and are shown to
+  coincide when `R` admits a generalized half-unit (or when
+  `TateCohomologyZeroAdd R` vanishes).
+- `FormParameter` packages a family of subgroups sandwiched between `LambdaMin`
+  and `LambdaMax` that is stable under pullbacks and self-adjoint scalars,
+  forming a `BoundedOrder` and `Lattice`.
+- `QuadraticForm R M Λ` is the quotient `Sesq M ⧸ Λ.func M`, with pullbacks,
+  self-adjoint scalar action, parameter-change maps for `Λ₁ ≤ Λ₂`, and the
+  associated `λ`-Hermitian form `associatedHermitian`.
+- `QuadraticFormCat R Λ` is the groupoid of nonsingular `(λ, Λ)`-quadratic
+  objects and their isometries, equipped with `symmetrizationFunctor` to
+  `HermitianFormCat R lam`, which is always faithful, full for `maxParam`, and
+  an equivalence whenever `R` has a generalized half-unit. -/
 
 open CategoryTheory
 open Opposite
@@ -377,6 +395,13 @@ abbrev QuadraticForm (M : C) (Λ : FormParameter (C := C) R lam) : Type v :=
 def toQuadraticForm (M : C) : Sesq M →+ QuadraticForm R M Λ :=
   QuotientAddGroup.mk' (Λ.func M)
 
+/-- A represented `(λ, Λ)`-quadratic form is zero iff its representative lies in `Λ.func M`. -/
+@[simp]
+lemma toQuadraticForm_eq_zero_iff (M : C) (q : Sesq M) :
+    toQuadraticForm R Λ M q = 0 ↔ q ∈ Λ.func M :=
+  QuotientAddGroup.eq_zero_iff q
+
+omit [Functor.Additive (HermitianCategory.duality (C := C))] in
 /-- Pullback of sesquilinear forms along `f : M ⟶ N` as an additive homomorphism.
 Additivity follows from preadditivity of composition in `C`. -/
 def pullbackSesqHom {M N : C} (f : M ⟶ N) : Sesq N →+ Sesq M where
@@ -397,7 +422,7 @@ def pullbackQuadraticForm {M N : C} (f : M ⟶ N) :
     -- Any `h ∈ Λ.func N` pulls back into `Λ.func M`, so its quotient class is `0`.
     intro h hh
     change toQuadraticForm R Λ M (pullbackSesqHom f h) = 0
-    rw [toQuadraticForm, QuotientAddGroup.mk'_apply, QuotientAddGroup.eq_zero_iff]
+    rw [toQuadraticForm_eq_zero_iff]
     exact Λ.pullback hh f)
 
 /-- Pullback of a represented `(λ, Λ)`-quadratic form acts on its underlying sesquilinear representative. -/
@@ -434,20 +459,38 @@ lemma pullbackQuadraticForm_comp {M N P : C} (f : M ⟶ N) (g : N ⟶ P)
   rw [op_comp, Functor.map_comp]
   simp only [Category.assoc]
 
+/-- Action of a self-adjoint scalar `r` (`IsSelfAdjoint r`) on `(λ, Λ)`-quadratic forms,
+induced on `Sesq M ⧸ Λ.func M` by `Λ.smul`. -/
+def smulQuadraticForm (M : C) {r : R} (hr : IsSelfAdjoint r) :
+    QuadraticForm R M Λ →+ QuadraticForm R M Λ :=
+  QuotientAddGroup.lift (Λ.func M)
+    ((toQuadraticForm R Λ M).comp (DistribSMul.toAddMonoidHom (Sesq M) r)) (by
+      -- Self-adjoint scalar multiplication preserves `Λ.func M`.
+      intro h hh
+      change toQuadraticForm R Λ M (r • h) = 0
+      rw [toQuadraticForm_eq_zero_iff]
+      exact Λ.smul hh hr)
+
+/-- Self-adjoint scalar multiplication on a represented `(λ, Λ)`-quadratic form acts on its representative. -/
+@[simp]
+lemma smulQuadraticForm_mk (M : C) {r : R} (hr : IsSelfAdjoint r) (q : Sesq M) :
+    smulQuadraticForm R Λ M hr (toQuadraticForm R Λ M q) =
+      toQuadraticForm R Λ M (r • q) := rfl
+
 /-- Underlying sesquilinear symmetrization `q ↦ star λ • q + q†`, which lands in `λ`-Hermitian forms. -/
-def symmetrizeSesqHom [StarLinearDuality R C] (M : C) : Sesq M →+ Sesq M :=
+def symmetrizeSesqHom (M : C) (lam : Z1Mul R) : Sesq M →+ Sesq M :=
   (star ((lam : Rˣ) : R)) • AddMonoidHom.id (Sesq M) + formDualHom M
 
 /-- Unfold the action of `symmetrizeSesqHom` on a sesquilinear form. -/
 @[simp]
-lemma symmetrizeSesqHom_apply [StarLinearDuality R C] (M : C) (q : Sesq M) :
-    symmetrizeSesqHom R M (lam := lam) q = star ((lam : Rˣ) : R) • q + formDual q := rfl
+lemma symmetrizeSesqHom_apply (M : C) (lam : Z1Mul R) (q : Sesq M) :
+    symmetrizeSesqHom R M lam q = star ((lam : Rˣ) : R) • q + formDual q := rfl
 
 /-- The symmetrization `star λ • q + q†` is always `λ`-Hermitian.
 Applying `formDual` uses conjugate-linearity and `λ * star λ = 1` to recover `λ • (star λ • q + q†)`. -/
 lemma symmetrizeSesqHom_isLambdaHermitian [StarLinearDuality R C]
-    (M : C) (q : Sesq M) :
-    IsLambdaHermitian R lam (symmetrizeSesqHom R M (lam := lam) q) := by
+    (M : C) (lam : Z1Mul R) (q : Sesq M) :
+    IsLambdaHermitian R lam (symmetrizeSesqHom R M lam q) := by
   rw [IsLambdaHermitian, symmetrizeSesqHom_apply, formDual_add,
     formDual_smul, formDoubleDual, star_star]
   have hscalar :
@@ -457,10 +500,10 @@ lemma symmetrizeSesqHom_isLambdaHermitian [StarLinearDuality R C]
   -- Distribute `λ` over `q† + λ⁻¹ • q` using `λ * star λ = 1`.
   rw [smul_add, smul_smul, hscalar, one_smul, add_comm]
 
-/-- Symmetrization of sesquilinear forms as a homomorphism into `LambdaHermitianForms R M lam`. -/
-def symmetrizeToHermitian [StarLinearDuality R C] (M : C) :
-    Sesq M →+ LambdaHermitianForms R M lam where
-  toFun q := ⟨symmetrizeSesqHom R M (lam := lam) q, symmetrizeSesqHom_isLambdaHermitian R M (lam := lam) q⟩
+/-- Symmetrization of sesquilinear forms as a homomorphism into `LambdaHermitianForm R M lam`. -/
+def symmetrizeToHermitian [StarLinearDuality R C] (M : C) (lam : Z1Mul R) :
+    Sesq M →+ LambdaHermitianForm R M lam where
+  toFun q := ⟨symmetrizeSesqHom R M lam q, symmetrizeSesqHom_isLambdaHermitian R M lam q⟩
   map_zero' := by ext; simp
   map_add' g h := by ext; simp [add_add_add_comm]
 
@@ -468,7 +511,7 @@ def symmetrizeToHermitian [StarLinearDuality R C] (M : C) :
 Scaling `q + λ • q† = 0` by `star λ` yields `star λ • q + q† = 0`. -/
 lemma symmetrizeToHermitian_eq_zero_of_mem [StarLinearDuality R C]
     {M : C} {q : Sesq M} (hq : q ∈ Λ.func M) :
-    symmetrizeToHermitian R M (lam := lam) q = 0 := by
+    symmetrizeToHermitian R M lam q = 0 := by
   apply Subtype.ext
   change star ((lam : Rˣ) : R) • q + formDual q = 0
   have hmax := Λ.supLambdaMax M hq
@@ -486,8 +529,8 @@ lemma symmetrizeToHermitian_eq_zero_of_mem [StarLinearDuality R C]
 /-- The associated `λ`-Hermitian form of a `(λ, Λ)`-quadratic form,
 obtained by descending `symmetrizeToHermitian` to the quotient `Sesq M ⧸ Λ.func M`. -/
 def associatedHermitian [StarLinearDuality R C] (M : C) :
-    QuadraticForm R M Λ →+ LambdaHermitianForms R M lam :=
-  QuotientAddGroup.lift (Λ.func M) (symmetrizeToHermitian R M (lam := lam))
+    QuadraticForm R M Λ →+ LambdaHermitianForm R M lam :=
+  QuotientAddGroup.lift (Λ.func M) (symmetrizeToHermitian R M lam)
     (fun _ hq => symmetrizeToHermitian_eq_zero_of_mem R Λ hq)
 
 /-- Unfold `associatedHermitian` on a represented `(λ, Λ)`-quadratic form. -/
@@ -541,8 +584,8 @@ lemma compIsQuadraticIsometry {M N P : C}
     (hf : isIsometryQuadraticForms R Λ qM qN f)
     (hg : isIsometryQuadraticForms R Λ qN qP g) :
     isIsometryQuadraticForms R Λ qM qP (f ≫ g) := by
-  letI : IsIso f := hf.1
-  letI : IsIso g := hg.1
+  let : IsIso f := hf.1
+  let : IsIso g := hg.1
   refine ⟨inferInstance, ?_⟩
   -- Pull back `qP` along `g`, then along `f`.
   rw [pullbackQuadraticForm_comp, hg.2, hf.2]
@@ -553,7 +596,7 @@ lemma invIsQuadraticIsometry {M N : C}
     (f : M ⟶ N) (hf : isIsometryQuadraticForms R Λ qM qN f) :
     letI : IsIso f := hf.1
     isIsometryQuadraticForms R Λ qN qM (inv f) := by
-  letI : IsIso f := hf.1
+  let : IsIso f := hf.1
   refine ⟨inferInstance, ?_⟩
   -- Substitute `qM = pullback f qN` and cancel `inv f ≫ f = 𝟙 N`.
   calc
@@ -597,7 +640,7 @@ abbrev QuadraticFormCat [StarLinearDuality R C] (Λ : FormParameter (C := C) R l
 /-- Every morphism in `QuadraticObject R Λ` is an isomorphism, with inverse `inverseIsQuadraticIsometry`. -/
 instance [StarLinearDuality R C] {X Y : QuadraticObject (C := C) R Λ} (f : X ⟶ Y) :
     IsIso f := by
-  letI : IsIso f.val := f.property.1
+  let : IsIso f.val := f.property.1
   let g := inverseIsQuadraticIsometry R Λ f
   use g
   constructor
@@ -628,8 +671,72 @@ def symmetrizationFunctor [StarLinearDuality R C] :
     have h := congrArg (fun q => (associatedHermitian R Λ X.M q).val) f.property.2
     rw [associatedHermitian_pullback] at h
     exact h⟩
-  map_id X := rfl
-  map_comp f g := rfl
+  map_id X := by apply Subtype.ext; rfl
+  map_comp f g := by apply Subtype.ext; rfl
+
+/-- Underlying object of `symmetrizationFunctor.obj X`. -/
+@[simp]
+lemma symmetrizationFunctor_obj_M [StarLinearDuality R C]
+    (X : QuadraticFormCat (C := C) R Λ) :
+    ((symmetrizationFunctor R Λ).obj X).M = X.M := rfl
+
+/-- Underlying Hermitian form of `symmetrizationFunctor.obj X`. -/
+@[simp]
+lemma symmetrizationFunctor_obj_form [StarLinearDuality R C]
+    (X : QuadraticFormCat (C := C) R Λ) :
+    ((symmetrizationFunctor R Λ).obj X).form = associatedHermitian R Λ X.M X.form := rfl
+
+/-- Underlying morphism of `(symmetrizationFunctor R Λ).map f`. -/
+@[simp]
+lemma symmetrizationFunctor_map_val [StarLinearDuality R C]
+    {X Y : QuadraticFormCat (C := C) R Λ} (f : X ⟶ Y) :
+    ((symmetrizationFunctor R Λ).map f).val = f.val := rfl
+
+/-- `symmetrizationFunctor` is unconditionally faithful for every ring `R` and form parameter `Λ`,
+since isometries in both categories are determined by their underlying morphism in `C`. -/
+instance [StarLinearDuality R C] : (symmetrizationFunctor R Λ).Faithful where
+  map_injective {X Y f g} h := by
+    apply Subtype.ext
+    exact congrArg
+      (fun k : (symmetrizationFunctor R Λ).obj X ⟶
+        (symmetrizationFunctor R Λ).obj Y => k.val) h
+
+/-- For the maximal form parameter `Λ_max`, `associatedHermitian` has trivial kernel on every object `M`. -/
+lemma associatedHermitian_injective_maxParam [StarLinearDuality R C] (M : C) :
+    Function.Injective (associatedHermitian R (FormParameter.maxParam R lam) M) := by
+  have hnorm : ((lam : Rˣ) : R) * star ((lam : Rˣ) : R) = 1 :=
+    congrArg (fun x : Rˣ => (x : R)) ((mem_Z1Mul R (lam : Rˣ)).mp lam.property)
+  intro x y hxy
+  apply sub_eq_zero.mp
+  have hker : ∀ q : QuadraticForm R M (FormParameter.maxParam R lam),
+      associatedHermitian R (FormParameter.maxParam R lam) M q = 0 → q = 0 := by
+    intro q
+    refine QuotientAddGroup.induction_on q ?_
+    intro a ha
+    change toQuadraticForm R (FormParameter.maxParam R lam) M a = 0
+    rw [toQuadraticForm_eq_zero_iff]
+    change a ∈ LambdaMax R M lam
+    rw [mem_LambdaMax]
+    have ha' := congrArg Subtype.val ha
+    change star ((lam : Rˣ) : R) • a + formDual a = 0 at ha'
+    have ht := congrArg (fun k : Sesq M => ((lam : Rˣ) : R) • k) ha'
+    simpa [smul_add, smul_smul, hnorm] using ht
+  apply hker (x - y)
+  rw [map_sub, hxy, sub_self]
+
+/-- For `Λ_max`, `symmetrizationFunctor` is unconditionally full, since `associatedHermitian` is injective. -/
+instance [StarLinearDuality R C] :
+    (symmetrizationFunctor R (FormParameter.maxParam (C := C) R lam)).Full where
+  map_surjective {X Y} f := by
+    let g : X.M ⟶ Y.M := f.val
+    have hp : pullbackQuadraticForm R (FormParameter.maxParam (C := C) R lam) g Y.form = X.form := by
+      apply associatedHermitian_injective_maxParam (C := C) R X.M
+      apply Subtype.ext
+      rw [associatedHermitian_pullback]
+      exact f.property.2
+    refine ⟨⟨g, f.property.1, hp⟩, ?_⟩
+    apply Subtype.ext
+    rfl
 
 /-- When `R` has a generalized half-unit, `associatedHermitian` is bijective on every object `M`.
 Injectivity follows from `LambdaMin = LambdaMax`; surjectivity lifts `h` to `λ • (r • h)`. -/
@@ -655,8 +762,7 @@ lemma associatedHermitian_bijective_of_halfUnit [StarLinearDuality R C]
       refine QuotientAddGroup.induction_on q ?_
       intro a ha
       change toQuadraticForm R Λ M a = 0
-      rw [toQuadraticForm, QuotientAddGroup.mk'_apply,
-        QuotientAddGroup.eq_zero_iff]
+      rw [toQuadraticForm_eq_zero_iff]
       -- `a` satisfies `star λ • a + a† = 0`, so `a ∈ LambdaMax = LambdaMin ≤ Λ.func M`.
       apply Λ.subLambdaMin M
       rw [LambdaMin_eq_LambdaMax_of_halfUnit R M lam ⟨r, hr⟩,
@@ -688,44 +794,55 @@ lemma associatedHermitian_bijective_of_halfUnit [StarLinearDuality R C]
         hnorm', one_mul]
     rw [hcoeff1, hcoeff2, ← add_smul, hr, one_smul]
 
+/-- Bundled additive equivalence `QuadraticForm R M Λ ≃+ LambdaHermitianForm R M lam`
+when `R` admits a generalized half-unit. -/
+noncomputable def associatedHermitianAddEquiv_of_halfUnit [StarLinearDuality R C]
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) (M : C) :
+    QuadraticForm R M Λ ≃+ LambdaHermitianForm R M lam :=
+  AddEquiv.ofBijective (associatedHermitian R Λ M)
+    (associatedHermitian_bijective_of_halfUnit R Λ hhalf M)
+
+/-- Vanishing of `TateCohomologyZeroAdd R` makes `associatedHermitian` bijective on every object `M`. -/
+lemma associatedHermitian_bijective_of_tateCohomologyZeroAddVanishes [StarLinearDuality R C]
+    (hzero : Subsingleton (TateCohomologyZeroAdd R)) (M : C) :
+    Function.Bijective (associatedHermitian R Λ M) :=
+  associatedHermitian_bijective_of_halfUnit R Λ
+    (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero) M
+
+/-- Bundled additive equivalence `QuadraticForm R M Λ ≃+ LambdaHermitianForm R M lam`
+when `TateCohomologyZeroAdd R` vanishes. -/
+noncomputable def associatedHermitianAddEquiv_of_tateCohomologyZeroAddVanishes
+    [StarLinearDuality R C] (hzero : Subsingleton (TateCohomologyZeroAdd R)) (M : C) :
+    QuadraticForm R M Λ ≃+ LambdaHermitianForm R M lam :=
+  associatedHermitianAddEquiv_of_halfUnit R Λ
+    (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero) M
+
 /-- When `R` has a generalized half-unit, `symmetrizationFunctor` is an equivalence of categories.
-Faithfulness is immediate on underlying morphisms; fullness and essential surjectivity follow from
-bijectivity of `associatedHermitian`. -/
+Faithfulness is unconditional; fullness and essential surjectivity follow from bijectivity
+of `associatedHermitian`, using `asIso` in the groupoid `HermitianFormCat`. -/
 lemma symmetrizationFunctor_isEquivalence_of_halfUnit [StarLinearDuality R C]
     (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) :
     (symmetrizationFunctor R Λ).IsEquivalence := by
   let hbij (M : C) :=
     associatedHermitian_bijective_of_halfUnit R Λ hhalf M
   refine {
-    faithful := {
-      map_injective := by
-        -- Isometries are determined by their underlying morphism in `C`.
-        intro X Y f g h
-        apply Subtype.ext
-        exact congrArg
-          (fun k : (symmetrizationFunctor R Λ).obj X ⟶
-            (symmetrizationFunctor R Λ).obj Y => k.val) h }
+    faithful := inferInstance
     full := {
       map_surjective := by
         -- Any Hermitian isometry preserves `associatedHermitian`, hence preserves the quadratic form by injectivity.
         intro X Y f
         let g : X.M ⟶ Y.M := f.val
-        have hfp :
-            g ≫ (associatedHermitian R Λ Y.M Y.form).val ≫
-                HermitianCategory.duality.map g.op =
-              (associatedHermitian R Λ X.M X.form).val :=
-          f.property.2
         have hp : pullbackQuadraticForm R Λ g Y.form = X.form := by
           apply (hbij X.M).1
           apply Subtype.ext
           rw [associatedHermitian_pullback]
-          exact hfp
+          exact f.property.2
         refine ⟨⟨g, f.property.1, hp⟩, ?_⟩
         apply Subtype.ext
         rfl }
     essSurj := {
       mem_essImage := by
-        -- Lift `Y.form` via surjectivity of `associatedHermitian` and exhibit an isomorphism via `𝟙 Y.M`.
+        -- Lift `Y.form` via surjectivity of `associatedHermitian` and use `asIso` in `HermitianFormCat`.
         intro Y
         obtain ⟨q, hq⟩ := (hbij Y.M).2 Y.form
         let X : QuadraticObject (C := C) R Λ :=
@@ -735,30 +852,93 @@ lemma symmetrizationFunctor_isEquivalence_of_halfUnit [StarLinearDuality R C]
               change IsIso (associatedHermitian R Λ Y.M q).val
               rw [hq]
               exact Y.nonsingular }
-        refine ⟨X, ?_⟩
-        dsimp [X]
-        refine ⟨{
-          hom := ⟨𝟙 Y.M, by
-            constructor
-            · exact IsIso.id Y.M
-            · change (𝟙 Y.M) ≫ Y.form.val ≫
-                  HermitianCategory.duality.map (𝟙 Y.M).op =
-                (associatedHermitian R Λ Y.M q).val
-              simpa using congrArg Subtype.val hq.symm⟩
-          inv := ⟨𝟙 Y.M, by
-            constructor
-            · exact IsIso.id Y.M
-            · change (𝟙 Y.M) ≫
-                  (associatedHermitian R Λ Y.M q).val ≫
-                  HermitianCategory.duality.map (𝟙 Y.M).op = Y.form.val
-              simpa using congrArg Subtype.val hq⟩
-          hom_inv_id := by
-            apply Subtype.ext
-            change (𝟙 Y.M) ≫ (𝟙 Y.M) = 𝟙 Y.M
-            simp
-          inv_hom_id := by
-            apply Subtype.ext
-            change (𝟙 Y.M) ≫ (𝟙 Y.M) = 𝟙 Y.M
-            simp }⟩ } }
+        let f : (symmetrizationFunctor R Λ).obj X ⟶ Y :=
+          ⟨𝟙 Y.M, IsIso.id Y.M, by
+            change (𝟙 Y.M) ≫ Y.form.val ≫
+                HermitianCategory.duality.map (𝟙 Y.M).op =
+              (associatedHermitian R Λ Y.M q).val
+            simpa using congrArg Subtype.val hq.symm⟩
+        exact ⟨X, ⟨asIso f⟩⟩ } }
+
+/-- Bundled equivalence `QuadraticFormCat R Λ ≌ HermitianFormCat R lam`
+when `R` has a generalized half-unit. -/
+noncomputable def symmetrizationEquivalence_of_halfUnit [StarLinearDuality R C]
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) :
+    QuadraticFormCat (C := C) R Λ ≌ HermitianFormCat (C := C) R lam :=
+  letI : (symmetrizationFunctor R Λ).IsEquivalence :=
+    symmetrizationFunctor_isEquivalence_of_halfUnit R Λ hhalf
+  (symmetrizationFunctor R Λ).asEquivalence
+
+/-- Vanishing of `TateCohomologyZeroAdd R` makes `symmetrizationFunctor` an equivalence. -/
+lemma symmetrizationFunctor_isEquivalence_of_tateCohomologyZeroAddVanishes
+    [StarLinearDuality R C] (hzero : Subsingleton (TateCohomologyZeroAdd R)) :
+    (symmetrizationFunctor R Λ).IsEquivalence :=
+  symmetrizationFunctor_isEquivalence_of_halfUnit R Λ
+    (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero)
+
+/-- Bundled equivalence `QuadraticFormCat R Λ ≌ HermitianFormCat R lam`
+when `TateCohomologyZeroAdd R` vanishes. -/
+noncomputable def symmetrizationEquivalence_of_tateCohomologyZeroAddVanishes
+    [StarLinearDuality R C] (hzero : Subsingleton (TateCohomologyZeroAdd R)) :
+    QuadraticFormCat (C := C) R Λ ≌ HermitianFormCat (C := C) R lam :=
+  symmetrizationEquivalence_of_halfUnit R Λ
+    (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero)
+
+section ParameterChange
+
+variable {Λ₁ Λ₂ : FormParameter (C := C) R lam}
+
+/-- Induced quotient homomorphism `QuadraticForm R M Λ₁ →+ QuadraticForm R M Λ₂`
+for an inclusion `Λ₁ ≤ Λ₂` of form parameters. -/
+def mapQuadraticFormOfLe (h : Λ₁ ≤ Λ₂) (M : C) :
+    QuadraticForm R M Λ₁ →+ QuadraticForm R M Λ₂ :=
+  QuotientAddGroup.map (Λ₁.func M) (Λ₂.func M) (AddMonoidHom.id (Sesq M)) (h M)
+
+/-- Unfold `mapQuadraticFormOfLe` on a represented quadratic form. -/
+@[simp]
+lemma mapQuadraticFormOfLe_mk (h : Λ₁ ≤ Λ₂) (M : C) (q : Sesq M) :
+    mapQuadraticFormOfLe R h M (toQuadraticForm R Λ₁ M q) =
+      toQuadraticForm R Λ₂ M q := rfl
+
+/-- `mapQuadraticFormOfLe` commutes with `associatedHermitian`. -/
+@[simp]
+lemma associatedHermitian_mapQuadraticFormOfLe [StarLinearDuality R C]
+    (h : Λ₁ ≤ Λ₂) (M : C) (q : QuadraticForm R M Λ₁) :
+    associatedHermitian R Λ₂ M (mapQuadraticFormOfLe R h M q) =
+      associatedHermitian R Λ₁ M q := by
+  refine QuotientAddGroup.induction_on q ?_
+  intro a
+  rfl
+
+/-- `mapQuadraticFormOfLe` commutes with pullback along any morphism `f : M ⟶ N`. -/
+lemma mapQuadraticFormOfLe_pullback (h : Λ₁ ≤ Λ₂) {M N : C} (f : M ⟶ N)
+    (q : QuadraticForm R N Λ₁) :
+    mapQuadraticFormOfLe R h M (pullbackQuadraticForm R Λ₁ f q) =
+      pullbackQuadraticForm R Λ₂ f (mapQuadraticFormOfLe R h N q) := by
+  refine QuotientAddGroup.induction_on q ?_
+  intro a
+  rfl
+
+/-- Induced functor `QuadraticFormCat R Λ₁ ⥤ QuadraticFormCat R Λ₂` for `Λ₁ ≤ Λ₂`,
+preserving underlying objects and isometry morphisms. -/
+def mapQuadraticFunctorOfLe [StarLinearDuality R C] (h : Λ₁ ≤ Λ₂) :
+    QuadraticFormCat (C := C) R Λ₁ ⥤ QuadraticFormCat (C := C) R Λ₂ where
+  obj X :=
+    { M := X.M
+      form := mapQuadraticFormOfLe R h X.M X.form
+      nonsingular := by
+        have hval :
+            (associatedHermitian R Λ₂ X.M (mapQuadraticFormOfLe R h X.M X.form)).val =
+              (associatedHermitian R Λ₁ X.M X.form).val :=
+          congrArg Subtype.val (associatedHermitian_mapQuadraticFormOfLe R h X.M X.form)
+        change IsIso (associatedHermitian R Λ₂ X.M (mapQuadraticFormOfLe R h X.M X.form)).val
+        rw [hval]
+        exact X.nonsingular }
+  map {X Y} f := ⟨f.val, f.property.1, by
+    rw [← mapQuadraticFormOfLe_pullback, f.property.2]⟩
+  map_id X := by apply Subtype.ext; rfl
+  map_comp f g := by apply Subtype.ext; rfl
+
+end ParameterChange
 
 end QuadraticForms
