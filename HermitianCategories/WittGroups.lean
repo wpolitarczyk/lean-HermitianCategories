@@ -969,3 +969,155 @@ lemma isQuadraticMetabolic_of_iso {lam : Z1Mul R} {Λ : FormParameter (C := C) R
     simpa using (reassoc_of% he) (HermitianCategory.duality.map i.op)
 
 end Metabolic
+
+/-! ## Split and quadratic Witt groups -/
+
+section SplitAndQuadraticWitt
+
+/-- `StableWittData` for nonsingular `λ`-Hermitian forms with split metabolizers. -/
+noncomputable def splitHermitianWittData (lam : Z1Mul R) :
+    StableWittData (HermitianFormCat (C := C) R lam) where
+  add := hermitianBiprod R
+  zero := hermitianZero R lam
+  neg := hermitianNeg R
+  metabolic := IsSplitMetabolic R
+  add_comm X Y := ⟨hermitianBiprodComm R X Y⟩
+  add_assoc X Y Z := ⟨hermitianBiprodAssoc R X Y Z⟩
+  zero_add X := ⟨hermitianZeroBiprod R X⟩
+  add_congr e₁ e₂ := hermitianBiprodCongr R e₁ e₂
+  metabolic_zero := isSplitMetabolic_zero (C := C) R lam
+  metabolic_self_add_neg := isSplitMetabolic_self_add_neg R
+  metabolic_add := isSplitMetabolic_biprod R
+  metabolic_of_iso := isSplitMetabolic_of_iso R
+
+/-- `StableWittData` for nonsingular `(λ, Λ)`-quadratic forms (using split metabolizers). -/
+noncomputable def quadraticWittData {lam : Z1Mul R} (Λ : FormParameter (C := C) R lam) :
+    StableWittData (QuadraticFormCat (C := C) R Λ) where
+  add := quadraticBiprod R
+  zero := quadraticZero R Λ
+  neg := quadraticNeg R
+  metabolic := IsQuadraticMetabolic R
+  add_comm X Y := ⟨quadraticBiprodComm R X Y⟩
+  add_assoc X Y Z := ⟨quadraticBiprodAssoc R X Y Z⟩
+  zero_add X := ⟨quadraticZeroBiprod R X⟩
+  add_congr e₁ e₂ := quadraticBiprodCongr R e₁ e₂
+  metabolic_zero := isQuadraticMetabolic_zero (C := C) R Λ
+  metabolic_self_add_neg := isQuadraticMetabolic_self_add_neg R
+  metabolic_add := isQuadraticMetabolic_biprod R
+  metabolic_of_iso := isQuadraticMetabolic_of_iso R
+
+/-- The split Witt group of `λ`-Hermitian forms in `C`. -/
+abbrev SplitHermitianWittGroup (lam : Z1Mul R) : Type (max u v) :=
+  GenericWittGroup (splitHermitianWittData (C := C) R lam)
+
+/-- The Witt group of `(λ, Λ)`-quadratic forms in `C` (using split metabolizers). -/
+abbrev QuadraticWittGroup {lam : Z1Mul R} (Λ : FormParameter (C := C) R lam) : Type (max u v) :=
+  GenericWittGroup (quadraticWittData (C := C) R Λ)
+
+/-- Canonical comparison homomorphism from the quadratic Witt group to the split
+Hermitian Witt group, induced by `symmetrizationFunctor`. -/
+noncomputable def quadraticWittToSplitWitt {lam : Z1Mul R}
+    (Λ : FormParameter (C := C) R lam) :
+    QuadraticWittGroup (C := C) R Λ →+ SplitHermitianWittGroup (C := C) R lam where
+  toFun := Quotient.lift
+    (fun X => GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+      ((symmetrizationFunctor R Λ).obj X)) (by
+        intro X Y ⟨M₁, M₂, h₁, h₂, ⟨e⟩⟩
+        apply Quotient.sound
+        refine ⟨(symmetrizationFunctor R Λ).obj M₁,
+          (symmetrizationFunctor R Λ).obj M₂,
+          h₁.toSplitMetabolic R, h₂.toSplitMetabolic R, ⟨?_⟩⟩
+        exact eqToIso (symmetrizationFunctor_obj_biprod R X M₁).symm ≪≫
+          (symmetrizationFunctor R Λ).mapIso e ≪≫
+          eqToIso (symmetrizationFunctor_obj_biprod R Y M₂))
+  map_zero' := by
+    change GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+      ((symmetrizationFunctor R Λ).obj (quadraticZero R Λ)) = 0
+    rw [symmetrizationFunctor_obj_zero]
+    rfl
+  map_add' := by
+    intro a b
+    refine Quotient.inductionOn₂ a b ?_
+    intro X Y
+    change GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+      ((symmetrizationFunctor R Λ).obj (quadraticBiprod R X Y)) =
+        GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+          ((symmetrizationFunctor R Λ).obj X) +
+        GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+          ((symmetrizationFunctor R Λ).obj Y)
+    rw [symmetrizationFunctor_obj_biprod]
+    rfl
+
+/-- When `R` has a generalized half-unit, `quadraticWittToSplitWitt` is bijective. -/
+lemma quadraticWittToSplitWitt_bijective_of_halfUnit {lam : Z1Mul R}
+    (Λ : FormParameter (C := C) R lam)
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) :
+    Function.Bijective (quadraticWittToSplitWitt (C := C) R Λ) := by
+  let E := symmetrizationEquivalence_of_halfUnit (C := C) R Λ hhalf
+  constructor
+  · intro a b hab
+    refine Quotient.inductionOn₂ a b ?_ hab
+    intro X Y hXY
+    change GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+        ((symmetrizationFunctor R Λ).obj X) =
+      GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+        ((symmetrizationFunctor R Λ).obj Y) at hXY
+    rw [GenericWittGroup.mk_eq_mk_iff] at hXY
+    rcases hXY with ⟨M₁, M₂, hM₁, hM₂, ⟨e⟩⟩
+    let N₁ := E.inverse.obj M₁
+    let N₂ := E.inverse.obj M₂
+    let e₁ : (symmetrizationFunctor R Λ).obj N₁ ≅ M₁ := E.counitIso.app M₁
+    let e₂ : (symmetrizationFunctor R Λ).obj N₂ ≅ M₂ := E.counitIso.app M₂
+    have hN₁ : IsQuadraticMetabolic R N₁ :=
+      (isQuadraticMetabolic_iff_isSplitMetabolic_of_halfUnit R hhalf N₁).2
+        (isSplitMetabolic_of_iso R e₁.symm hM₁)
+    have hN₂ : IsQuadraticMetabolic R N₂ :=
+      (isQuadraticMetabolic_iff_isSplitMetabolic_of_halfUnit R hhalf N₂).2
+        (isSplitMetabolic_of_iso R e₂.symm hM₂)
+    let A := quadraticBiprod R X N₁
+    let B := quadraticBiprod R Y N₂
+    let eH : (symmetrizationFunctor R Λ).obj A ≅
+        (symmetrizationFunctor R Λ).obj B :=
+      eqToIso (symmetrizationFunctor_obj_biprod R X N₁) ≪≫
+        hermitianBiprodCongr R (Iso.refl _) e₁ ≪≫ e ≪≫
+        hermitianBiprodCongr R (Iso.refl _) e₂.symm ≪≫
+        eqToIso (symmetrizationFunctor_obj_biprod R Y N₂).symm
+    let eQ : A ≅ B :=
+      E.unitIso.app A ≪≫ E.inverse.mapIso eH ≪≫ (E.unitIso.app B).symm
+    apply Quotient.sound
+    exact ⟨N₁, N₂, hN₁, hN₂, ⟨eQ⟩⟩
+  · intro b
+    refine Quotient.inductionOn b ?_
+    intro Y
+    let X := E.inverse.obj Y
+    let e : (symmetrizationFunctor R Λ).obj X ≅ Y := E.counitIso.app Y
+    refine ⟨GenericWittGroup.mk (quadraticWittData (C := C) R Λ) X, ?_⟩
+    change GenericWittGroup.mk (splitHermitianWittData (C := C) R lam)
+      ((symmetrizationFunctor R Λ).obj X) =
+        GenericWittGroup.mk (splitHermitianWittData (C := C) R lam) Y
+    rw [GenericWittGroup.mk_eq_mk_iff]
+    exact ⟨hermitianZero R lam, hermitianZero R lam,
+      isSplitMetabolic_zero (C := C) R lam,
+      isSplitMetabolic_zero (C := C) R lam,
+      ⟨hermitianBiprodCongr R e (Iso.refl _)⟩⟩
+
+/-- Canonical isomorphism `QuadraticWittGroup R Λ ≃+ SplitHermitianWittGroup R lam`
+when `R` has a generalized half-unit. -/
+noncomputable def quadraticWittEquivSplitWitt_of_halfUnit {lam : Z1Mul R}
+    (Λ : FormParameter (C := C) R lam)
+    (hhalf : ∃ r : R, isGeneralizedHalfUnit R r) :
+    QuadraticWittGroup (C := C) R Λ ≃+ SplitHermitianWittGroup (C := C) R lam :=
+  AddEquiv.ofBijective (quadraticWittToSplitWitt (C := C) R Λ)
+    (quadraticWittToSplitWitt_bijective_of_halfUnit (C := C) R Λ hhalf)
+
+/-- Vanishing of `TateCohomologyZeroAdd R` makes `quadraticWittToSplitWitt` an isomorphism. -/
+noncomputable def quadraticWittEquivSplitWitt_of_tateCohomologyZeroAddVanishes
+    {lam : Z1Mul R} (Λ : FormParameter (C := C) R lam)
+    (hzero : Subsingleton (TateCohomologyZeroAdd R)) :
+    QuadraticWittGroup (C := C) R Λ ≃+ SplitHermitianWittGroup (C := C) R lam :=
+  quadraticWittEquivSplitWitt_of_halfUnit (C := C) R Λ
+    (existsGeneralizedHalfUnit_of_tateCohomologyZeroAddVanishes R hzero)
+
+end SplitAndQuadraticWitt
+
+end NonAbelian
