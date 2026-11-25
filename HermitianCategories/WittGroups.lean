@@ -581,3 +581,391 @@ lemma symmetrizationFunctor_obj_biprod {lam : Z1Mul R} {Λ : FormParameter (C :=
   rfl
 
 end Operations
+
+/-! ## Metabolizers and metabolic objects -/
+
+section Metabolic
+
+/-- The short complex `L ⟶ X.M ⟶ D(L)` associated to an isotropic morphism `i : L ⟶ X.M`. -/
+def hermitianMetabolizerComplex {lam : Z1Mul R}
+    (X : HermitianObject (C := C) R lam) {L : C} (i : L ⟶ X.M)
+    (hi : i ≫ X.form.val ≫ HermitianCategory.duality.map i.op = 0) :
+    ShortComplex C :=
+  ShortComplex.mk i (X.form.val ≫ HermitianCategory.duality.map i.op) hi
+
+/-- A `λ`-Hermitian object is split-metabolic if it admits a split metabolizer,
+i.e., a split short exact sequence `0 ⟶ L ⟶ X.M ⟶ D(L) ⟶ 0` with `L` isotropic. -/
+def IsSplitMetabolic {lam : Z1Mul R} (X : HermitianObject (C := C) R lam) : Prop :=
+  ∃ (L : C) (i : L ⟶ X.M) (hi : i ≫ X.form.val ≫ HermitianCategory.duality.map i.op = 0),
+    Nonempty (hermitianMetabolizerComplex R X i hi).Splitting
+
+/-- A `(λ, Λ)`-quadratic object is metabolic if it admits a split metabolizer `i : L ⟶ X.M`
+that is quadratically isotropic (`pullbackQuadraticForm i X.form = 0`). -/
+def IsQuadraticMetabolic {lam : Z1Mul R} {Λ : FormParameter (C := C) R lam}
+    (X : QuadraticObject (C := C) R Λ) : Prop :=
+  ∃ (L : C) (i : L ⟶ X.M) (hi : pullbackQuadraticForm R Λ i X.form = 0),
+    Nonempty (hermitianMetabolizerComplex R ((symmetrizationFunctor R Λ).obj X) i (by
+      have h := congrArg (fun q => (associatedHermitian R Λ L q).val) hi
+      rw [associatedHermitian_pullback, map_zero] at h
+      exact h)).Splitting
+
+omit [HasBinaryBiproducts C] [HasZeroObject C] in
+/-- A quadratic-metabolic object has split-metabolic associated Hermitian form. -/
+lemma IsQuadraticMetabolic.toSplitMetabolic {lam : Z1Mul R} {Λ : FormParameter (C := C) R lam}
+    {X : QuadraticObject (C := C) R Λ} (hX : IsQuadraticMetabolic R X) :
+    IsSplitMetabolic R ((symmetrizationFunctor R Λ).obj X) := by
+  rcases hX with ⟨L, i, hi, hs⟩
+  exact ⟨L, i, _, hs⟩
+
+omit [HasBinaryBiproducts C] [HasZeroObject C] in
+/-- When `R` has a generalized half-unit, split-metabolicity of `symmetrizationFunctor.obj X`
+is equivalent to quadratic metabolicity of `X`. -/
+lemma isQuadraticMetabolic_iff_isSplitMetabolic_of_halfUnit {lam : Z1Mul R}
+    {Λ : FormParameter (C := C) R lam} (hhalf : ∃ r : R, isGeneralizedHalfUnit R r)
+    (X : QuadraticObject (C := C) R Λ) :
+    IsQuadraticMetabolic R X ↔ IsSplitMetabolic R ((symmetrizationFunctor R Λ).obj X) := by
+  constructor
+  · exact IsQuadraticMetabolic.toSplitMetabolic R
+  · rintro ⟨L, i, hi, hs⟩
+    change L ⟶ X.M at i
+    refine ⟨L, i, ?_, hs⟩
+    apply (associatedHermitian_bijective_of_halfUnit R Λ hhalf L).1
+    apply Subtype.ext
+    rw [associatedHermitian_pullback, map_zero]
+    exact hi
+
+omit [StarLinearDuality R C] [HasBinaryBiproducts C] in
+/-- The zero `λ`-Hermitian object is split-metabolic. -/
+lemma isSplitMetabolic_zero (lam : Z1Mul R) :
+    IsSplitMetabolic R (hermitianZero (C := C) R lam) := by
+  refine ⟨0, 0, by simp only [Limits.zero_comp], ?_⟩
+  exact ⟨ShortComplex.Splitting.ofIsZero _
+    (isZero_zero C) (isZero_zero C) (isZero_duality_zero (C := C))⟩
+
+omit [StarLinearDuality R C] [HasZeroObject C] in
+/-- `X ⊞ (-X)` is split-metabolic via the diagonal metabolizer `Δ : X.M ⟶ X.M ⊞ X.M`. -/
+lemma isSplitMetabolic_self_add_neg {lam : Z1Mul R}
+    (X : HermitianObject (C := C) R lam) :
+    IsSplitMetabolic R (hermitianBiprod R X (hermitianNeg R X)) := by
+  let i : X.M ⟶ X.M ⊞ X.M := biprod.lift (𝟙 X.M) (𝟙 X.M)
+  let g : X.M ⊞ X.M ⟶ (HermitianCategory.duality (C := C)).obj (op X.M) :=
+    (hermitianBiprod R X (hermitianNeg R X)).form.val ≫
+      HermitianCategory.duality.map i.op
+  have hi : i ≫ g = 0 := by
+    simp [g, i, hermitianBiprod, hermitianNeg, sesqBiprod,
+      Preadditive.comp_add, Preadditive.add_comp, ← Functor.map_comp, ← op_comp]
+  refine ⟨X.M, i, hi, ⟨?_⟩⟩
+  have : IsIso X.form.val := X.nonsingular
+  refine {
+    r := biprod.fst
+    s := -inv X.form.val ≫ biprod.inr
+    f_r := by
+      change i ≫ (biprod.fst : X.M ⊞ X.M ⟶ X.M) = 𝟙 X.M
+      simp [i]
+    s_g := by
+      change (-inv X.form.val ≫ (biprod.inr : X.M ⟶ X.M ⊞ X.M)) ≫ g = 𝟙 _
+      simp [g, i, hermitianBiprod, hermitianNeg, sesqBiprod,
+        Preadditive.comp_add, Preadditive.add_comp, ← Functor.map_comp, ← op_comp]
+    id := by
+      change (biprod.fst : X.M ⊞ X.M ⟶ X.M) ≫ i +
+        g ≫ (-inv X.form.val ≫ (biprod.inr : X.M ⟶ X.M ⊞ X.M)) =
+          𝟙 (X.M ⊞ X.M)
+      ext <;>
+        simp [g, i, hermitianBiprod, hermitianNeg, sesqBiprod,
+          Preadditive.comp_add, Preadditive.add_comp, ← Functor.map_comp, ← op_comp] }
+
+omit [StarLinearDuality R C] [HasZeroObject C] in
+/-- Split-metabolicity is closed under orthogonal direct sums. -/
+lemma isSplitMetabolic_biprod {lam : Z1Mul R}
+    {X Y : HermitianObject (C := C) R lam}
+    (hX : IsSplitMetabolic R X) (hY : IsSplitMetabolic R Y) :
+    IsSplitMetabolic R (hermitianBiprod R X Y) := by
+  rcases hX with ⟨L₁, i₁, hi₁, ⟨s₁⟩⟩
+  rcases hY with ⟨L₂, i₂, hi₂, ⟨s₂⟩⟩
+  let i : L₁ ⊞ L₂ ⟶ X.M ⊞ Y.M := biprod.map i₁ i₂
+  have hi : i ≫ (hermitianBiprod R X Y).form.val ≫
+      HermitianCategory.duality.map i.op = 0 := by
+    dsimp [i]
+    ext <;>
+      simp only [hermitianBiprod, sesqBiprod, Preadditive.comp_add,
+        Preadditive.add_comp, Category.assoc, biprod.map_fst_assoc,
+        biprod.map_snd_assoc, biprod.inl_fst_assoc, biprod.inl_snd_assoc,
+        biprod.inr_fst_assoc, biprod.inr_snd_assoc, Limits.zero_comp,
+        Limits.comp_zero, add_zero, zero_add]
+    · rw [← Functor.map_comp, ← op_comp, biprod.map_fst,
+        op_comp, Functor.map_comp]
+      simpa using (reassoc_of% hi₁)
+        (HermitianCategory.duality.map (biprod.fst : L₁ ⊞ L₂ ⟶ L₁).op)
+    · rw [← Functor.map_comp, ← op_comp, biprod.map_snd,
+        op_comp, Functor.map_comp]
+      simpa using (reassoc_of% hi₂)
+        (HermitianCategory.duality.map (biprod.snd : L₁ ⊞ L₂ ⟶ L₂).op)
+  refine ⟨L₁ ⊞ L₂, i, hi, ⟨?_⟩⟩
+  let g₁ := X.form.val ≫ HermitianCategory.duality.map i₁.op
+  let g₂ := Y.form.val ≫ HermitianCategory.duality.map i₂.op
+  let S := ShortComplex.mk (biprod.map i₁ i₂) (biprod.map g₁ g₂) (by
+    ext <;> simp [g₁, g₂, hi₁, hi₂])
+  have s : S.Splitting := splittingBiprod s₁ s₂
+  apply ShortComplex.Splitting.ofIso s
+  refine ShortComplex.isoMk
+    (S₁ := S) (S₂ := hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi)
+    (Iso.refl _) (Iso.refl _) (dualityBiprodIso L₁ L₂).symm ?_ ?_
+  · change (𝟙 _) ≫ biprod.map i₁ i₂ = biprod.map i₁ i₂ ≫ 𝟙 _
+    simp only [Category.id_comp, Category.comp_id]
+  · ext <;>
+      simp [S, i, g₁, g₂, hermitianMetabolizerComplex, hermitianBiprod, sesqBiprod,
+        dualityBiprodIso, Preadditive.comp_add, Preadditive.add_comp,
+        ← Functor.map_comp, ← op_comp]
+
+omit [StarLinearDuality R C] [HasBinaryBiproducts C] [HasZeroObject C] in
+/-- Split-metabolicity is invariant under isometry. -/
+lemma isSplitMetabolic_of_iso {lam : Z1Mul R}
+    {X Y : HermitianObject (C := C) R lam} (e : X ≅ Y)
+    (hX : IsSplitMetabolic R X) : IsSplitMetabolic R Y := by
+  rcases hX with ⟨L, i, hi, ⟨s⟩⟩
+  let eM : X.M ≅ Y.M :=
+    { hom := e.hom.val
+      inv := e.inv.val
+      hom_inv_id := congrArg Subtype.val e.hom_inv_id
+      inv_hom_id := congrArg Subtype.val e.inv_hom_id }
+  let j : L ⟶ Y.M := i ≫ eM.hom
+  have he : eM.hom ≫ Y.form.val ≫ HermitianCategory.duality.map eM.hom.op =
+      X.form.val := e.hom.property.2
+  have hj : j ≫ Y.form.val ≫ HermitianCategory.duality.map j.op = 0 := by
+    calc
+      j ≫ Y.form.val ≫ HermitianCategory.duality.map j.op =
+          i ≫ (eM.hom ≫ Y.form.val ≫ HermitianCategory.duality.map eM.hom.op) ≫
+            HermitianCategory.duality.map i.op := by
+              simp only [j, op_comp, Functor.map_comp, Category.assoc]
+      _ = i ≫ X.form.val ≫ HermitianCategory.duality.map i.op := by rw [he]
+      _ = 0 := hi
+  refine ⟨L, j, hj, ⟨?_⟩⟩
+  apply ShortComplex.Splitting.ofIso s
+  refine ShortComplex.isoMk
+    (S₁ := hermitianMetabolizerComplex R X i hi)
+    (S₂ := hermitianMetabolizerComplex R Y j hj)
+    (Iso.refl _) eM (Iso.refl _) ?_ ?_
+  · change (𝟙 L) ≫ j = i ≫ eM.hom
+    simp [j]
+  · change eM.hom ≫ (Y.form.val ≫ HermitianCategory.duality.map j.op) =
+      (X.form.val ≫ HermitianCategory.duality.map i.op) ≫ 𝟙 _
+    simp only [j, op_comp, Functor.map_comp, Category.comp_id]
+    simpa using (reassoc_of% he) (HermitianCategory.duality.map i.op)
+
+omit [HasBinaryBiproducts C] in
+/-- The zero `(λ, Λ)`-quadratic object is quadratic-metabolic. -/
+lemma isQuadraticMetabolic_zero {lam : Z1Mul R} (Λ : FormParameter (C := C) R lam) :
+    IsQuadraticMetabolic R (quadraticZero (C := C) R Λ) := by
+  refine ⟨0, 0, ?_, ?_⟩
+  · exact map_zero (pullbackQuadraticForm R Λ (0 : (0 : C) ⟶ (0 : C)))
+  · exact ⟨ShortComplex.Splitting.ofIsZero _
+      (isZero_zero C) (isZero_zero C) (isZero_duality_zero (C := C))⟩
+
+omit [HasZeroObject C] in
+/-- `X ⊞ (-X)` is quadratic-metabolic via the diagonal metabolizer `Δ : X.M ⟶ X.M ⊞ X.M`. -/
+lemma isQuadraticMetabolic_self_add_neg {lam : Z1Mul R} {Λ : FormParameter (C := C) R lam}
+    (X : QuadraticObject (C := C) R Λ) :
+    IsQuadraticMetabolic R (quadraticBiprod R X (quadraticNeg R X)) := by
+  let i : X.M ⟶ X.M ⊞ X.M := biprod.lift (𝟙 X.M) (𝟙 X.M)
+  have hq : pullbackQuadraticForm R Λ i (quadraticBiprod R X (quadraticNeg R X)).form = 0 := by
+    dsimp only [quadraticBiprod, quadraticNeg]
+    rw [map_add, ← pullbackQuadraticForm_comp, ← pullbackQuadraticForm_comp]
+    simp only [i, biprod.lift_fst, biprod.lift_snd, pullbackQuadraticForm_id,
+      map_neg, add_neg_cancel]
+  refine ⟨X.M, i, hq, ?_⟩
+  have hform :
+      ((symmetrizationFunctor R Λ).obj (quadraticBiprod R X (quadraticNeg R X))).form.val =
+        (hermitianBiprod R ((symmetrizationFunctor R Λ).obj X)
+          (hermitianNeg R ((symmetrizationFunctor R Λ).obj X))).form.val := by
+    dsimp only [quadraticBiprod, quadraticNeg]
+    change (associatedHermitian R Λ (X.M ⊞ X.M)
+        (pullbackQuadraticForm R Λ biprod.fst X.form +
+          pullbackQuadraticForm R Λ biprod.snd (-X.form))).val =
+      sesqBiprod ((associatedHermitian R Λ X.M X.form).val)
+        (-((associatedHermitian R Λ X.M X.form).val))
+    rw [map_add]
+    change
+      (associatedHermitian R Λ (X.M ⊞ X.M)
+          (pullbackQuadraticForm R Λ biprod.fst X.form)).val +
+        (associatedHermitian R Λ (X.M ⊞ X.M)
+          (pullbackQuadraticForm R Λ biprod.snd (-X.form))).val =
+        sesqBiprod ((associatedHermitian R Λ X.M X.form).val)
+          (-((associatedHermitian R Λ X.M X.form).val))
+    rw [associatedHermitian_pullback, associatedHermitian_pullback, map_neg]
+    rfl
+  have : IsIso (associatedHermitian R Λ X.M X.form).val :=
+    ((symmetrizationFunctor R Λ).obj X).nonsingular
+  refine ⟨{
+    r := biprod.fst
+    s := -inv (associatedHermitian R Λ X.M X.form).val ≫ biprod.inr
+    f_r := by
+      change i ≫ (biprod.fst : X.M ⊞ X.M ⟶ X.M) = 𝟙 X.M
+      simp [i]
+    s_g := by
+      have hsg : (-inv (associatedHermitian R Λ X.M X.form).val ≫
+            (biprod.inr : X.M ⟶ X.M ⊞ X.M)) ≫
+          sesqBiprod (associatedHermitian R Λ X.M X.form).val
+            (-((associatedHermitian R Λ X.M X.form).val)) ≫
+          HermitianCategory.duality.map i.op = 𝟙 _ := by
+        simp [i, sesqBiprod, Preadditive.comp_add, Preadditive.add_comp,
+          Preadditive.neg_comp, Preadditive.comp_neg, ← Functor.map_comp, ← op_comp]
+      dsimp [hermitianMetabolizerComplex]
+      erw [hform]
+      exact hsg
+    id := by
+      have hid : (biprod.fst : X.M ⊞ X.M ⟶ X.M) ≫ i +
+          (sesqBiprod (associatedHermitian R Λ X.M X.form).val
+            (-((associatedHermitian R Λ X.M X.form).val)) ≫
+            HermitianCategory.duality.map i.op) ≫
+          (-inv (associatedHermitian R Λ X.M X.form).val ≫
+            (biprod.inr : X.M ⟶ X.M ⊞ X.M)) = 𝟙 (X.M ⊞ X.M) := by
+        ext <;>
+          simp [i, sesqBiprod, Preadditive.comp_add, Preadditive.add_comp,
+            Preadditive.neg_comp, Preadditive.comp_neg, ← Functor.map_comp, ← op_comp]
+      dsimp [hermitianMetabolizerComplex]
+      erw [hform]
+      exact hid }⟩
+
+omit [HasZeroObject C] in
+/-- Quadratic-metabolicity is closed under orthogonal direct sums. -/
+lemma isQuadraticMetabolic_biprod {lam : Z1Mul R} {Λ : FormParameter (C := C) R lam}
+    {X Y : QuadraticObject (C := C) R Λ}
+    (hX : IsQuadraticMetabolic R X) (hY : IsQuadraticMetabolic R Y) :
+    IsQuadraticMetabolic R (quadraticBiprod R X Y) := by
+  rcases hX with ⟨L₁, i₁, hq₁, ⟨s₁⟩⟩
+  rcases hY with ⟨L₂, i₂, hq₂, ⟨s₂⟩⟩
+  let i : L₁ ⊞ L₂ ⟶ X.M ⊞ Y.M := biprod.map i₁ i₂
+  have hq : pullbackQuadraticForm R Λ i (quadraticBiprod R X Y).form = 0 := by
+    dsimp only [quadraticBiprod]
+    rw [map_add, ← pullbackQuadraticForm_comp, ← pullbackQuadraticForm_comp]
+    simp only [i, biprod.map_fst, biprod.map_snd,
+      pullbackQuadraticForm_comp, hq₁, hq₂, map_zero, add_zero]
+  refine ⟨L₁ ⊞ L₂, i, hq, ?_⟩
+  have hh₁ : i₁ ≫ (associatedHermitian R Λ X.M X.form).val ≫
+      HermitianCategory.duality.map i₁.op = 0 := by
+    have h := congrArg (fun q => (associatedHermitian R Λ L₁ q).val) hq₁
+    rw [associatedHermitian_pullback, map_zero] at h
+    exact h
+  have hh₂ : i₂ ≫ (associatedHermitian R Λ Y.M Y.form).val ≫
+      HermitianCategory.duality.map i₂.op = 0 := by
+    have h := congrArg (fun q => (associatedHermitian R Λ L₂ q).val) hq₂
+    rw [associatedHermitian_pullback, map_zero] at h
+    exact h
+  let g₁ := (associatedHermitian R Λ X.M X.form).val ≫
+    HermitianCategory.duality.map i₁.op
+  let g₂ := (associatedHermitian R Λ Y.M Y.form).val ≫
+    HermitianCategory.duality.map i₂.op
+  let S := ShortComplex.mk (biprod.map i₁ i₂) (biprod.map g₁ g₂) (by
+    ext <;> simp [g₁, g₂, hh₁, hh₂])
+  have s : S.Splitting := splittingBiprod s₁ s₂
+  have hform :
+      ((symmetrizationFunctor R Λ).obj (quadraticBiprod R X Y)).form.val =
+        (hermitianBiprod R ((symmetrizationFunctor R Λ).obj X)
+          ((symmetrizationFunctor R Λ).obj Y)).form.val := by
+    dsimp only [quadraticBiprod]
+    change (associatedHermitian R Λ (X.M ⊞ Y.M)
+        (pullbackQuadraticForm R Λ biprod.fst X.form +
+          pullbackQuadraticForm R Λ biprod.snd Y.form)).val =
+      sesqBiprod (associatedHermitian R Λ X.M X.form).val
+        (associatedHermitian R Λ Y.M Y.form).val
+    rw [map_add]
+    change
+      (associatedHermitian R Λ (X.M ⊞ Y.M)
+          (pullbackQuadraticForm R Λ biprod.fst X.form)).val +
+        (associatedHermitian R Λ (X.M ⊞ Y.M)
+          (pullbackQuadraticForm R Λ biprod.snd Y.form)).val =
+        sesqBiprod (associatedHermitian R Λ X.M X.form).val
+          (associatedHermitian R Λ Y.M Y.form).val
+    rw [associatedHermitian_pullback, associatedHermitian_pullback]
+    rfl
+  refine ⟨ShortComplex.Splitting.ofIso s ?_⟩
+  refine ShortComplex.isoMk
+    (S₁ := S) (S₂ := hermitianMetabolizerComplex R
+      ((symmetrizationFunctor R Λ).obj (quadraticBiprod R X Y)) i _)
+    (Iso.refl _) (Iso.refl _) (dualityBiprodIso L₁ L₂).symm ?_ ?_
+  · change (𝟙 _) ≫ biprod.map i₁ i₂ = biprod.map i₁ i₂ ≫ 𝟙 _
+    simp only [Category.id_comp, Category.comp_id]
+  · change (𝟙 (X.M ⊞ Y.M)) ≫
+      (((symmetrizationFunctor R Λ).obj (quadraticBiprod R X Y)).form.val ≫
+        HermitianCategory.duality.map i.op) =
+      (biprod.map g₁ g₂) ≫ (dualityBiprodIso L₁ L₂).inv
+    rw [Category.id_comp, hform]
+    have h₁ :
+        (biprod.inl : X.M ⟶ X.M ⊞ Y.M) ≫
+            sesqBiprod (associatedHermitian R Λ X.M X.form).val
+              (associatedHermitian R Λ Y.M Y.form).val ≫
+            HermitianCategory.duality.map (biprod.map i₁ i₂).op =
+          (associatedHermitian R Λ X.M X.form).val ≫
+            HermitianCategory.duality.map (biprod.fst ≫ i₁).op := by
+      rw [sesqBiprod, ← Category.assoc, Preadditive.comp_add]
+      simp only [biprod.inl_fst_assoc, biprod.inl_snd_assoc,
+        Limits.zero_comp, add_zero]
+      rw [Category.assoc, ← Functor.map_comp, ← op_comp, biprod.map_fst]
+    have h₂ :
+        (biprod.inr : Y.M ⟶ X.M ⊞ Y.M) ≫
+            sesqBiprod (associatedHermitian R Λ X.M X.form).val
+              (associatedHermitian R Λ Y.M Y.form).val ≫
+            HermitianCategory.duality.map (biprod.map i₁ i₂).op =
+          (associatedHermitian R Λ Y.M Y.form).val ≫
+            HermitianCategory.duality.map (biprod.snd ≫ i₂).op := by
+      rw [sesqBiprod, ← Category.assoc, Preadditive.comp_add]
+      simp only [biprod.inr_fst_assoc, biprod.inr_snd_assoc,
+        Limits.zero_comp, zero_add]
+      rw [Category.assoc, ← Functor.map_comp, ← op_comp, biprod.map_snd]
+    ext
+    · change (biprod.inl : X.M ⟶ X.M ⊞ Y.M) ≫
+          sesqBiprod (associatedHermitian R Λ X.M X.form).val
+            (associatedHermitian R Λ Y.M Y.form).val ≫
+          HermitianCategory.duality.map (biprod.map i₁ i₂).op =
+        (biprod.inl : X.M ⟶ X.M ⊞ Y.M) ≫ biprod.map g₁ g₂ ≫ (dualityBiprodIso L₁ L₂).inv
+      rw [h₁]
+      simp [g₁, dualityBiprodIso, ← Functor.map_comp, ← op_comp]
+    · change (biprod.inr : Y.M ⟶ X.M ⊞ Y.M) ≫
+          sesqBiprod (associatedHermitian R Λ X.M X.form).val
+            (associatedHermitian R Λ Y.M Y.form).val ≫
+          HermitianCategory.duality.map (biprod.map i₁ i₂).op =
+        (biprod.inr : Y.M ⟶ X.M ⊞ Y.M) ≫ biprod.map g₁ g₂ ≫ (dualityBiprodIso L₁ L₂).inv
+      rw [h₂]
+      simp [g₂, dualityBiprodIso, ← Functor.map_comp, ← op_comp]
+
+omit [HasBinaryBiproducts C] [HasZeroObject C] in
+/-- Quadratic-metabolicity is invariant under isometry. -/
+lemma isQuadraticMetabolic_of_iso {lam : Z1Mul R} {Λ : FormParameter (C := C) R lam}
+    {X Y : QuadraticObject (C := C) R Λ} (e : X ≅ Y)
+    (hX : IsQuadraticMetabolic R X) : IsQuadraticMetabolic R Y := by
+  rcases hX with ⟨L, i, hi, ⟨s⟩⟩
+  let eM : X.M ≅ Y.M :=
+    { hom := e.hom.val
+      inv := e.inv.val
+      hom_inv_id := congrArg Subtype.val e.hom_inv_id
+      inv_hom_id := congrArg Subtype.val e.inv_hom_id }
+  let j : L ⟶ Y.M := i ≫ eM.hom
+  have hj : pullbackQuadraticForm R Λ j Y.form = 0 := by
+    dsimp [j]
+    rw [pullbackQuadraticForm_comp, e.hom.property.2, hi]
+  have he : eM.hom ≫ ((symmetrizationFunctor R Λ).obj Y).form.val ≫
+      HermitianCategory.duality.map eM.hom.op =
+        ((symmetrizationFunctor R Λ).obj X).form.val := by
+    change eM.hom ≫ (associatedHermitian R Λ Y.M Y.form).val ≫
+      HermitianCategory.duality.map eM.hom.op =
+        (associatedHermitian R Λ X.M X.form).val
+    rw [← associatedHermitian_pullback]
+    exact congrArg Subtype.val
+      (congrArg (associatedHermitian R Λ X.M) e.hom.property.2)
+  refine ⟨L, j, hj, ⟨?_⟩⟩
+  apply ShortComplex.Splitting.ofIso s
+  refine ShortComplex.isoMk
+    (S₁ := _) (S₂ := hermitianMetabolizerComplex R
+      ((symmetrizationFunctor R Λ).obj Y) j _)
+    (Iso.refl _) eM (Iso.refl _) ?_ ?_
+  · change (𝟙 L) ≫ j = i ≫ eM.hom
+    simp [j]
+  · change eM.hom ≫
+      (((symmetrizationFunctor R Λ).obj Y).form.val ≫
+        HermitianCategory.duality.map j.op) =
+      (((symmetrizationFunctor R Λ).obj X).form.val ≫
+        HermitianCategory.duality.map i.op) ≫ 𝟙 _
+    simp only [j, op_comp, Category.comp_id]
+    simpa using (reassoc_of% he) (HermitianCategory.duality.map i.op)
+
+end Metabolic
