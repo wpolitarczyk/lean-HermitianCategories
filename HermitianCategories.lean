@@ -4,6 +4,7 @@ import HermitianCategories.HermitianFunctors
 import HermitianCategories.TateCohomology
 import HermitianCategories.QuadraticForms
 import HermitianCategories.QuadraticFunctors
+import HermitianCategories.WittGroups
 
 /-!
 # HermitianCategories library entry point

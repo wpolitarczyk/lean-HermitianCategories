@@ -1121,3 +1121,266 @@ noncomputable def quadraticWittEquivSplitWitt_of_tateCohomologyZeroAddVanishes
 end SplitAndQuadraticWitt
 
 end NonAbelian
+
+/-! ## Ordinary Witt groups in abelian Hermitian categories -/
+
+section AbelianWitt
+
+variable {C : Type u} [Category.{v} C] [Abelian C] [HermitianCategory C]
+variable (R : Type u) [CommRing R] [StarRing R] [Linear R C]
+variable [Functor.Additive (HermitianCategory.duality (C := C))]
+variable [StarLinearDuality R C]
+
+/-- In an abelian Hermitian category, a `λ`-Hermitian object is metabolic if it admits
+a metabolizer `0 ⟶ L ⟶ X.M ⟶ D(L) ⟶ 0` (not necessarily split). -/
+def IsMetabolic {lam : Z1Mul R} (X : HermitianObject (C := C) R lam) : Prop :=
+  ∃ (L : C) (i : L ⟶ X.M) (hi : i ≫ X.form.val ≫ HermitianCategory.duality.map i.op = 0),
+    (hermitianMetabolizerComplex R X i hi).ShortExact
+
+omit [StarLinearDuality R C] in
+/-- Every split-metabolic Hermitian object is metabolic when `C` is abelian. -/
+lemma IsSplitMetabolic.isMetabolic {lam : Z1Mul R}
+    {X : HermitianObject (C := C) R lam} (hX : IsSplitMetabolic R X) :
+    IsMetabolic R X := by
+  rcases hX with ⟨L, i, hi, ⟨s⟩⟩
+  exact ⟨L, i, hi, s.shortExact⟩
+
+omit [StarLinearDuality R C] in
+/-- The zero `λ`-Hermitian object is metabolic in an abelian Hermitian category. -/
+lemma isMetabolic_zero (lam : Z1Mul R) :
+    IsMetabolic R (hermitianZero (C := C) R lam) :=
+  (isSplitMetabolic_zero (C := C) R lam).isMetabolic R
+
+omit [StarLinearDuality R C] in
+/-- `X ⊞ (-X)` is metabolic in an abelian Hermitian category. -/
+lemma isMetabolic_self_add_neg {lam : Z1Mul R}
+    (X : HermitianObject (C := C) R lam) :
+    IsMetabolic R (hermitianBiprod R X (hermitianNeg R X)) :=
+  (isSplitMetabolic_self_add_neg R X).isMetabolic R
+
+omit [StarLinearDuality R C] in
+/-- Metabolicity in an abelian Hermitian category is closed under orthogonal direct sums. -/
+lemma isMetabolic_biprod {lam : Z1Mul R}
+    {X Y : HermitianObject (C := C) R lam}
+    (hX : IsMetabolic R X) (hY : IsMetabolic R Y) :
+    IsMetabolic R (hermitianBiprod R X Y) := by
+  rcases hX with ⟨L₁, i₁, hi₁, hS₁⟩
+  rcases hY with ⟨L₂, i₂, hi₂, hS₂⟩
+  let i : L₁ ⊞ L₂ ⟶ X.M ⊞ Y.M := biprod.map i₁ i₂
+  have hi : i ≫ (hermitianBiprod R X Y).form.val ≫
+      HermitianCategory.duality.map i.op = 0 := by
+    dsimp [i]
+    ext <;>
+      simp only [hermitianBiprod, sesqBiprod, Preadditive.comp_add,
+        Preadditive.add_comp, Category.assoc, biprod.map_fst_assoc,
+        biprod.map_snd_assoc, biprod.inl_fst_assoc, biprod.inl_snd_assoc,
+        biprod.inr_fst_assoc, biprod.inr_snd_assoc, Limits.zero_comp,
+        Limits.comp_zero, add_zero, zero_add]
+    · rw [← Functor.map_comp, ← op_comp, biprod.map_fst,
+        op_comp, Functor.map_comp]
+      simpa using (reassoc_of% hi₁)
+        (HermitianCategory.duality.map (biprod.fst : L₁ ⊞ L₂ ⟶ L₁).op)
+    · rw [← Functor.map_comp, ← op_comp, biprod.map_snd,
+        op_comp, Functor.map_comp]
+      simpa using (reassoc_of% hi₂)
+        (HermitianCategory.duality.map (biprod.snd : L₁ ⊞ L₂ ⟶ L₂).op)
+  let g₁ := X.form.val ≫ HermitianCategory.duality.map i₁.op
+  let g₂ := Y.form.val ≫ HermitianCategory.duality.map i₂.op
+  let S := ShortComplex.mk (biprod.map i₁ i₂) (biprod.map g₁ g₂) (by
+    ext <;> simp [g₁, g₂, hi₁, hi₂])
+  have : Mono i₁ := hS₁.mono_f
+  have : Mono i₂ := hS₂.mono_f
+  have : Epi g₁ := hS₁.epi_g
+  have : Epi g₂ := hS₂.epi_g
+  have hExact : S.Exact := by
+    apply ShortComplex.exact_of_f_is_kernel S
+    let hK₁ := hS₁.fIsKernel
+    let hK₂ := hS₂.fIsKernel
+    refine IsLimit.mk
+      (fun s => biprod.lift
+        (hK₁.lift (KernelFork.ofι (Fork.ι s ≫ biprod.fst) (by
+          have h := congrArg (fun q => q ≫ (biprod.fst : S.X₃ ⟶ _)) (KernelFork.condition s)
+          rw [Limits.zero_comp, Category.assoc] at h
+          change Fork.ι s ≫ biprod.map g₁ g₂ ≫ biprod.fst = 0 at h
+          rw [biprod.map_fst, ← Category.assoc] at h
+          exact h)))
+        (hK₂.lift (KernelFork.ofι (Fork.ι s ≫ biprod.snd) (by
+          have h := congrArg (fun q => q ≫ (biprod.snd : S.X₃ ⟶ _)) (KernelFork.condition s)
+          rw [Limits.zero_comp, Category.assoc] at h
+          change Fork.ι s ≫ biprod.map g₁ g₂ ≫ biprod.snd = 0 at h
+          rw [biprod.map_snd, ← Category.assoc] at h
+          exact h))))
+      (fun s j => by
+        rcases j with _ | _
+        · dsimp [KernelFork.ofι]
+          ext
+          · simp only [S]
+            rw [Category.assoc, biprod.map_fst i₁ i₂, ← Category.assoc]
+            erw [biprod.lift_fst, hK₁.fac _ .zero]
+            rfl
+          · simp only [S]
+            rw [Category.assoc, biprod.map_snd i₁ i₂, ← Category.assoc]
+            erw [biprod.lift_snd, hK₂.fac _ .zero]
+            rfl
+        · dsimp [KernelFork.ofι]
+          simp)
+      (fun s m hm => by
+        dsimp [KernelFork.ofι]
+        ext
+        · apply hK₁.hom_ext
+          intro j
+          rcases j with _ | _
+          · have hfac := hK₁.fac (KernelFork.ofι (Fork.ι s ≫ biprod.fst) (by
+              have h := congrArg (fun q => q ≫ (biprod.fst : S.X₃ ⟶ _)) (KernelFork.condition s)
+              rw [Limits.zero_comp, Category.assoc] at h
+              change Fork.ι s ≫ biprod.map g₁ g₂ ≫ biprod.fst = 0 at h
+              rw [biprod.map_fst, ← Category.assoc] at h
+              exact h)) .zero
+            have hm₀ := congrArg (fun q => q ≫ biprod.fst) (hm .zero)
+            dsimp [KernelFork.ofι, S, hermitianMetabolizerComplex] at hfac hm₀ ⊢
+            rw [biprod.lift_fst]
+            erw [hfac]
+            rw [Category.assoc, biprod.map_fst, ← Category.assoc] at hm₀
+            exact hm₀
+          · dsimp [KernelFork.ofι]
+            rw [(hermitianMetabolizerComplex R X i₁ hi₁).zero]
+            erw [Limits.comp_zero, Limits.comp_zero]
+        · apply hK₂.hom_ext
+          intro j
+          rcases j with _ | _
+          · have hfac := hK₂.fac (KernelFork.ofι (Fork.ι s ≫ biprod.snd) (by
+              have h := congrArg (fun q => q ≫ (biprod.snd : S.X₃ ⟶ _)) (KernelFork.condition s)
+              rw [Limits.zero_comp, Category.assoc] at h
+              change Fork.ι s ≫ biprod.map g₁ g₂ ≫ biprod.snd = 0 at h
+              rw [biprod.map_snd, ← Category.assoc] at h
+              exact h)) .zero
+            have hm₀ := congrArg (fun q => q ≫ biprod.snd) (hm .zero)
+            dsimp [KernelFork.ofι, S, hermitianMetabolizerComplex] at hfac hm₀ ⊢
+            rw [biprod.lift_snd]
+            erw [hfac]
+            rw [Category.assoc, biprod.map_snd, ← Category.assoc] at hm₀
+            exact hm₀
+          · dsimp [KernelFork.ofι]
+            rw [(hermitianMetabolizerComplex R Y i₂ hi₂).zero]
+            erw [Limits.comp_zero, Limits.comp_zero])
+  let eS : S ≅ hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi := by
+    refine ShortComplex.isoMk
+      (S₁ := S) (S₂ := hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi)
+      (Iso.refl _) (Iso.refl _) (dualityBiprodIso L₁ L₂).symm ?_ ?_
+    · change (𝟙 _) ≫ biprod.map i₁ i₂ = biprod.map i₁ i₂ ≫ 𝟙 _
+      simp only [Category.id_comp, Category.comp_id]
+    · ext <;>
+        simp [S, i, g₁, g₂, hermitianMetabolizerComplex, hermitianBiprod, sesqBiprod,
+          dualityBiprodIso, Preadditive.comp_add, Preadditive.add_comp,
+          ← Functor.map_comp, ← op_comp]
+  have hExact' : (hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi).Exact :=
+    (ShortComplex.exact_iff_of_iso eS).1 hExact
+  have hMono : Mono (hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi).f :=
+    biprod.map_mono i₁ i₂
+  have hEpi : Epi (hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi).g := by
+    have h : (hermitianMetabolizerComplex R (hermitianBiprod R X Y) i hi).g =
+        S.g ≫ (dualityBiprodIso L₁ L₂).symm.hom := by
+      dsimp [hermitianMetabolizerComplex, hermitianBiprod]
+      ext <;>
+        simp [S, i, g₁, g₂, sesqBiprod,
+          dualityBiprodIso, Preadditive.comp_add, Preadditive.add_comp,
+          ← Functor.map_comp, ← op_comp]
+    rw [h]
+    exact epi_comp S.g (dualityBiprodIso L₁ L₂).symm.hom
+  exact ⟨L₁ ⊞ L₂, i, hi, ShortComplex.ShortExact.mk' hExact' hMono hEpi⟩
+
+omit [StarLinearDuality R C] in
+/-- Metabolicity in an abelian Hermitian category is invariant under isometry. -/
+lemma isMetabolic_of_iso {lam : Z1Mul R}
+    {X Y : HermitianObject (C := C) R lam} (e : X ≅ Y)
+    (hX : IsMetabolic R X) : IsMetabolic R Y := by
+  rcases hX with ⟨L, i, hi, hS⟩
+  let eM : X.M ≅ Y.M :=
+    { hom := e.hom.val
+      inv := e.inv.val
+      hom_inv_id := congrArg Subtype.val e.hom_inv_id
+      inv_hom_id := congrArg Subtype.val e.inv_hom_id }
+  let j : L ⟶ Y.M := i ≫ eM.hom
+  have he : eM.hom ≫ Y.form.val ≫ HermitianCategory.duality.map eM.hom.op =
+      X.form.val := e.hom.property.2
+  have hj : j ≫ Y.form.val ≫ HermitianCategory.duality.map j.op = 0 := by
+    calc
+      j ≫ Y.form.val ≫ HermitianCategory.duality.map j.op =
+          i ≫ (eM.hom ≫ Y.form.val ≫ HermitianCategory.duality.map eM.hom.op) ≫
+            HermitianCategory.duality.map i.op := by
+              simp only [j, op_comp, Functor.map_comp, Category.assoc]
+      _ = i ≫ X.form.val ≫ HermitianCategory.duality.map i.op := by rw [he]
+      _ = 0 := hi
+  let eS : hermitianMetabolizerComplex R X i hi ≅
+      hermitianMetabolizerComplex R Y j hj := by
+    refine ShortComplex.isoMk
+      (S₁ := hermitianMetabolizerComplex R X i hi)
+      (S₂ := hermitianMetabolizerComplex R Y j hj)
+      (Iso.refl _) eM (Iso.refl _) ?_ ?_
+    · change (𝟙 L) ≫ j = i ≫ eM.hom
+      simp [j]
+    · change eM.hom ≫ (Y.form.val ≫ HermitianCategory.duality.map j.op) =
+        (X.form.val ≫ HermitianCategory.duality.map i.op) ≫ 𝟙 _
+      simp only [j, op_comp, Functor.map_comp, Category.comp_id]
+      simpa using (reassoc_of% he) (HermitianCategory.duality.map i.op)
+  have hExact : (hermitianMetabolizerComplex R Y j hj).Exact :=
+    (ShortComplex.exact_iff_of_iso eS).1 hS.exact
+  have : Mono i := hS.mono_f
+  have : IsIso eM.hom := Iso.isIso_hom eM
+  have : Mono eM.hom := inferInstance
+  have hMono : Mono (hermitianMetabolizerComplex R Y j hj).f :=
+    mono_comp i eM.hom
+  have hEpi : Epi (hermitianMetabolizerComplex R Y j hj).g := by
+    have h : (hermitianMetabolizerComplex R Y j hj).g =
+        eM.inv ≫ (hermitianMetabolizerComplex R X i hi).g := by
+      dsimp [hermitianMetabolizerComplex]
+      rw [Iso.eq_inv_comp]
+      simp only [j, op_comp, Functor.map_comp]
+      simpa using (reassoc_of% he) (HermitianCategory.duality.map i.op)
+    rw [h]
+    have : IsIso eM.inv := Iso.isIso_inv eM
+    refine ⟨fun {Z} f₁ f₂ hf => ?_⟩
+    dsimp [hermitianMetabolizerComplex] at f₁ f₂ hf ⊢
+    apply hS.epi_g.left_cancellation
+    dsimp [hermitianMetabolizerComplex]
+    simp only [Category.assoc] at hf ⊢
+    exact (cancel_epi eM.inv).mp hf
+  exact ⟨L, j, hj, ShortComplex.ShortExact.mk' hExact hMono hEpi⟩
+
+/-- `StableWittData` for nonsingular `λ`-Hermitian forms with arbitrary metabolizers
+in an abelian Hermitian category. -/
+noncomputable def hermitianWittData (lam : Z1Mul R) :
+    StableWittData (HermitianFormCat (C := C) R lam) where
+  add := hermitianBiprod R
+  zero := hermitianZero R lam
+  neg := hermitianNeg R
+  metabolic := IsMetabolic R
+  add_comm X Y := ⟨hermitianBiprodComm R X Y⟩
+  add_assoc X Y Z := ⟨hermitianBiprodAssoc R X Y Z⟩
+  zero_add X := ⟨hermitianZeroBiprod R X⟩
+  add_congr e₁ e₂ := hermitianBiprodCongr R e₁ e₂
+  metabolic_zero := isMetabolic_zero (C := C) R lam
+  metabolic_self_add_neg := isMetabolic_self_add_neg R
+  metabolic_add := isMetabolic_biprod R
+  metabolic_of_iso := isMetabolic_of_iso R
+
+/-- The ordinary Witt group of `λ`-Hermitian forms in an abelian Hermitian category `C`. -/
+abbrev HermitianWittGroup (lam : Z1Mul R) : Type (max u v) :=
+  GenericWittGroup (hermitianWittData (C := C) R lam)
+
+/-- Canonical comparison homomorphism from the split Witt group to the ordinary Witt group
+when `C` is abelian. -/
+noncomputable def splitWittToWitt (lam : Z1Mul R) :
+    SplitHermitianWittGroup (C := C) R lam →+ HermitianWittGroup (C := C) R lam where
+  toFun := Quotient.lift
+    (fun X => GenericWittGroup.mk (hermitianWittData (C := C) R lam) X) (by
+      intro X Y ⟨M₁, M₂, h₁, h₂, hIso⟩
+      exact Quotient.sound ⟨M₁, M₂, h₁.isMetabolic R, h₂.isMetabolic R, hIso⟩)
+  map_zero' := rfl
+  map_add' := by
+    intro a b
+    refine Quotient.inductionOn₂ a b ?_
+    intro X Y
+    rfl
+
+end AbelianWitt
